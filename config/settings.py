@@ -26,7 +26,12 @@ SECRET_KEY = 'django-insecure-d*$9uws^f9hhlqqo4-y_zqtkt3)@u7&l6kf!do97derzy2_3u%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'reel-recipe-chi.vercel.app', 
+    '127.0.0.1', 
+    'localhost',
+    'reelrecipe.online'
+]
 
 
 # Application definition
