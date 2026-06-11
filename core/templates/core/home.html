@@ -1,0 +1,656 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section id="convert" class="hero-section">
+    <div class="hero-grid-container layout-large-preview">
+
+        <div class="hero-content-left">
+            <span class="badge" style="background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 0.25rem; vertical-align: middle;">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                100% Free Video to Recipe Converter
+            </span>
+            
+            <h1 class="hero-title">Free Video to Recipe <br class="desktop-only">Converter Online</h1>
+            
+            <p class="hero-subtitle">
+                Don't waste time pausing fast cooking frames. Paste any video link to watch our free AI recipe extractor instantly parse social clips into immaculate, organized recipe logs at zero cost.
+            </p>
+
+            <form method="POST" action="{% url 'home' %}" class="extractor-form" id="recipeSubmitForm">
+                {% csrf_token %}
+                <div class="input-group" style="position: relative; display: flex; align-items: center; gap: 1rem; width: 100%;">
+                    <input type="url" id="videoUrlInput" name="video_url" class="video-input-field" placeholder="Paste Instagram, Facebook, TikTok, or YouTube link..." required style="flex: 1;">
+                    
+                    <div class="form-action-wrapper" style="min-width: 220px;">
+                        <button type="submit" id="submitBtn" class="btn-extract">Convert to Recipe Free</button>
+                        
+                        <div id="loadingIndicator" style="display: none; align-items: center; justify-content: center; gap: 0.5rem; background-color: var(--primary); color: white; font-size: 1rem; font-weight: 600; padding: 1rem 1.75rem; border: none; border-radius: var(--radius-md); width: 100%; white-space: nowrap; box-sizing: border-box; line-height: normal; height: 100%;">
+                            <div style="width: 16px; height: 16px; border: 2px solid rgba(255, 255, 255, 0.3); border-top-color: white; border-radius: 50%; animation: spinLoader 0.8s linear infinite; flex-shrink: 0;"></div>
+                            Converting Video...
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div id="conversionHistorySection" style="margin-top: 1.5rem; display: none;">
+                <span class="network-label" style="display: block; font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem; font-weight: 500;">Recently Converted:</span>
+                <div id="historyList" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
+            </div>
+
+            <div class="supported-networks" style="margin-top: 2rem;">
+                <span class="network-label">Instant free parsing supported for:</span>
+                <div class="network-badge-row">
+                    <span class="net-tag ig">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.35rem; vertical-align: middle;"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>Instagram
+                    </span>
+                    <span class="net-tag fb">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 0.35rem; vertical-align: middle;">
+                            <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.8z"/>
+                        </svg>Facebook
+                    </span>
+                    <span class="net-tag tt">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.35rem; vertical-align: middle;"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg>TikTok
+                    </span>
+                    <span class="net-tag yt">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.35rem; vertical-align: middle;"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>YouTube Shorts
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-visual-right visual-expanded">
+            <div class="converter-video-box">
+                <video class="hero-video-element" autoplay loop muted playsinline>
+                    <source src="{% static 'core/videos/cooking_3.mp4' %}" type="video/mp4">
+                </video>
+            </div>
+            
+            <div class="converter-arrow-relation">
+                <svg class="curved-arrow-svg" viewBox="0 0 50 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M 5 10 Q 40 10 40 80" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4 4"/>
+                    <polygon points="35,75 40,88 45,75" fill="currentColor"/>
+                </svg>
+            </div>
+
+            {% comment %} <div class="converter-recipe-box">
+                <h3 id="previewRecipeTitle">Chicken Afritada</h3>
+             
+                <div class="card-inner-block">
+                    <h4>Ingredients</h4>
+                    <ul class="recipe-mini-ingredients">
+                        <li>
+                            <div class="premium-check-icon">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <span class="ingredient-text"><strong>500g</strong> Chicken <span class="ingredient-note">(bone-in, cut up)</span></span>
+                        </li>
+                        <li>
+                            <div class="premium-check-icon">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <span class="ingredient-text"><strong>250ml</strong> Tomato Sauce</span>
+                        </li>
+                        <li>
+                            <div class="premium-check-icon">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <span class="ingredient-text"><strong>1 large</strong> Potato & Carrot <span class="ingredient-note">(cubed)</span></span>
+                        </li>
+                        <li>
+                            <div class="premium-check-icon">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <span class="ingredient-text"><strong>1/2 cup</strong> Green Peas & Bell Pepper</span>
+                        </li>
+                    </ul>
+                </div>
+            </div> {% endcomment %}
+            <div class="converter-recipe-box" >
+                    <div class="recipe-header">
+                        <h3>Chicken Afritada</h3>
+                        <div class="recipe-meta-metrics">
+                            <span>⏱ Prep Time: 10 Mins</span>
+                        </div>
+                    </div>
+                    <hr class="recipe-divider">
+                    <div class="recipe-body-content">
+                        <h4>Ingredients</h4>
+                        <ul class="recipe-list-styled">
+                            <li><input type="checkbox" checked disabled>500g Chicken (Bone-in, cut up)</li>
+                            <li><input type="checkbox" checked disabled>250ml Tomato Sauce</li>
+                            <li><input type="checkbox" checked disabled>1 large Potato & Carrot</li>
+                            <li><input type="checkbox" checked disabled>1/2 cup Green Peas & Bell Pepper</li>
+                        </ul>
+                    </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+{% if recipe_extracted %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<div id="recipe-modal-backdrop" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <section id="recipe-output-section" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; width: 100%; max-width: 750px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); position: relative; box-sizing: border-box; -webkit-overflow-scrolling: touch;">
+        
+        <div style="position: sticky; top: 0; right: 0; width: 100%; display: flex; justify-content: flex-end; padding: 1rem; box-sizing: border-box; background: linear-gradient(to bottom, rgba(255,255,255,1) 60%, rgba(255,255,255,0)); pointer-events: none; z-index: 10;">
+            <button onclick="document.getElementById('recipe-modal-backdrop').style.display='none'" style="background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 1.5rem; font-weight: 400; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; pointer-events: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: all 0.2s ease;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#0f172a'" onmouseout="this.style.background='#f1f5f9'; this.style.color='#64748b'">
+                &times;
+            </button>
+        </div>
+
+        <div id="recipe-capture-area" class="responsive-card-body" style="padding: 0 2.5rem 1.5rem 2.5rem; margin-top: -1.5rem; background: #ffffff;">
+            <div style="text-align: center; margin-bottom: 2rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem;">
+                <h2 style="font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 800; color: #0f172a; margin: 1.5rem 0 0.75rem 0; line-height: 1.25;">{{ recipe_title }}</h2>
+                <div style="display: flex; justify-content: center; gap: 1.25rem; color: #64748b; font-size: 0.9rem; font-weight: 500; flex-wrap: wrap;">
+                    <span>⏱ Prep Time: {{ recipe_duration }}</span>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <details class="recipe-accordion-item" name="recipe-accordion" open style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden;">
+                    <summary style="font-size: 1.15rem; font-weight: 700; color: #0f172a; padding: 1.25rem; background-color: #f8fafc; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none; user-select: none; border-bottom: 1px solid #e2e8f0;">
+                        <span class="no-spin" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="background: #f97316; color: #ffffff; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.75rem;">🍳</span>
+                            Ingredients Checklist
+                        </span>
+                        <span class="accordion-arrow" style="color: #a1a1aa; display: inline-block; transition: transform 0.2s ease;">▼</span>
+                    </summary>
+                    <div style="padding: 1.25rem;">
+                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem;">
+                            {% for ingredient in recipe_ingredients %}
+                            <li class="checkbox-container-row" style="display: flex; align-items: flex-start; gap: 0.75rem; font-size: 0.95rem; color: #334155;">
+                                <input type="checkbox" style="margin-top: 0.2rem; width: 1.1rem; height: 1.1rem; accent-color: #f97316; cursor: pointer; flex-shrink: 0;">
+                                <span class="ingredient-text-label" style="line-height: 1.4;">{{ ingredient }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </details>
+
+                {% if recipe_directions %}
+                <details class="recipe-accordion-item" name="recipe-accordion" open style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden;">
+                    <summary style="font-size: 1.15rem; font-weight: 700; color: #0f172a; padding: 1.25rem; background-color: #f8fafc; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none; user-select: none; border-bottom: 1px solid #e2e8f0;">
+                        <span class="no-spin" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="background: #f97316; color: #ffffff; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.75rem;">📖</span>
+                            Step-by-Step Directions
+                        </span>
+                        <span class="accordion-arrow" style="color: #a1a1aa; display: inline-block; transition: transform 0.2s ease;">▼</span>
+                    </summary>
+                    <div style="padding: 1.25rem;">
+                        <ol style="padding: 0; margin: 0; list-style: none; display: flex; flex-direction: column; gap: 1rem;">
+                            {% for step in recipe_directions %}
+                            <li class="direction-step-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; display: flex; gap: 0.75rem; align-items: flex-start;">
+                                <span style="background: #f8fafc; border: 1px solid #cbd5e1; color: #64748b; font-weight: 700; min-width: 24px; height: 24px; border-radius: 0.375rem; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">{{ forloop.counter }}</span>
+                                <div style="flex: 1;">
+                                    <p style="margin: 0; color: #334155; font-size: 0.95rem; line-height: 1.5;">{{ step }}</p>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                </details>
+                {% endif %}
+            </div>
+        </div>
+        <div style="padding: 0 2.5rem 2.5rem 2.5rem; display: flex; gap: 0.75rem; justify-content: flex-end; align-items: center; background: #ffffff; border-radius: 0 0 1.5rem 1.5rem;">
+            <button id="downloadRecipeImgBtn" onclick="downloadRecipeAsImage()" style="background: #16a34a; color: white; border: none; padding: 0.65rem 1.25rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; transition: all 0.2s ease;" onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Save as Image
+            </button>
+            
+            <button onclick="document.getElementById('recipe-modal-backdrop').style.display='none'" style="background: #e2e8f0; color: #334155; border: none; padding: 0.65rem 1.25rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.2s ease;" onmouseover="this.style.background='#cbd5e1'" onmouseout="this.style.background='#e2e8f0'">
+                Close
+            </button>
+        </div>
+
+    </section>
+</div>
+
+<script>
+function downloadRecipeAsImage() {
+    const targetElement = document.getElementById('recipe-capture-area');
+    const actionBtn = document.getElementById('downloadRecipeImgBtn');
+    
+    if (!targetElement) return;
+
+    // Cache current button markup and switch to loading state
+    const fallbackHTML = actionBtn.innerHTML;
+    actionBtn.innerText = "Generating PNG...";
+    actionBtn.disabled = true;
+
+    // Temporarily expand accordions so closed blocks are captured in full view
+    const accordions = targetElement.querySelectorAll('details');
+    const openStates = Array.from(accordions).map(acc => acc.open);
+    accordions.forEach(acc => acc.open = true);
+
+    // Convert DOM section wrapper into Canvas
+    html2canvas(targetElement, {
+        backgroundColor: "#ffffff",
+        scale: 2, // High resolution pixel ratio enhancement
+        useCORS: true,
+        logging: false
+    }).then(canvas => {
+        // Restore elements to their original open/close UI state
+        accordions.forEach((acc, index) => acc.open = openStates[index]);
+
+        const imageUrl = canvas.toDataURL("image/png");
+        const downloadAnchor = document.createElement("a");
+        
+        // Match the clean safe filename string to your dynamic Django title context
+        const rawTitle = "{{ recipe_title|escapejs }}" || "downloaded-recipe";
+        const standardizedSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        
+        downloadAnchor.href = imageUrl;
+        downloadAnchor.download = `${standardizedSlug || 'recipe'}.png`;
+        
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        document.body.removeChild(downloadAnchor);
+
+        // Revert button interface state
+        actionBtn.innerHTML = fallbackHTML;
+        actionBtn.disabled = false;
+    }).catch(err => {
+        console.error("Canvas translation failed:", err);
+        accordions.forEach((acc, index) => acc.open = openStates[index]);
+        actionBtn.innerHTML = fallbackHTML;
+        actionBtn.disabled = false;
+    });
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org/",
+  "@type": "Recipe",
+  "name": "{{ recipe_title|escapejs }}",
+  "author": {
+    "@type": "Organization",
+    "name": "Free Video to Recipe Converter"
+  },
+  "description": "Clean structured recipe extracted automatically from video footage.",
+  "prepTime": "PT{{ recipe_duration|slugify|upper }}M", 
+  "recipeIngredient": [
+    {% for ingredient in recipe_ingredients %}"{{ ingredient|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}
+  ],
+  "recipeInstructions": [
+    {% for step in recipe_directions %}
+    {
+      "@type": "HowToStep",
+      "text": "{{ step|escapejs }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
+
+<section id="features" class="features-section">
+    <div class="section-container">
+        <h2 class="section-title">Supercharge Your Cookbook with Unlimited Free AI Tools</h2>
+        <p class="section-subtitle">Stop scrubbing through fast timelines. Let our free conversion engine extract the clean, structured text of any video recipe instantly.</p>
+        
+        <div class="conversion-showcase-container">
+            <div class="showcase-box video-source-box">
+                <div class="video-wrapper-inner">
+                    <video class="showcase-video-element" autoplay loop muted playsinline>
+                        <source src="{% static 'core/videos/cooking.mp4' %}" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+
+            <div class="showcase-arrow-divider">
+                <div class="pulse-line-horizontal"></div>
+                <div class="arrow-icon-circle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 5 20 12 13 19"></polyline>
+                        <line x1="4" y1="12" x2="20" y2="12"></line>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="showcase-box recipe-output-box">
+                <div class="recipe-card-inner">
+                    <div class="recipe-header">
+                        <h3>Full English Breakfast</h3>
+                        <div class="recipe-meta-metrics">
+                            <span>⏱ Prep Time: 5 Mins</span>
+                        </div>
+                    </div>
+                    <hr class="recipe-divider">
+                    <div class="recipe-body-content">
+                        <h4>Ingredients</h4>
+                        <ul class="recipe-list-styled">
+                            <li><input type="checkbox" checked disabled> 2 Pork Sausages</li>
+                            <li><input type="checkbox" checked disabled> 2-3 strips Back Bacon</li>
+                            <li><input type="checkbox" checked disabled> 2 Large Eggs</li>
+                            <li><input type="checkbox" checked disabled> 150g Baked Beans</li>
+                            <li><input type="checkbox" checked disabled> 1-2 slices Black Pudding</li>
+                            <li><input type="checkbox" checked disabled> 100g Button Mushrooms</li>
+                            <li><input type="checkbox" checked disabled> 1 Tomato (halved)</li>
+                            <li><input type="checkbox" checked disabled> 1-2 slices Thick White Bread (for frying/toasting)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon-bubble">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </div>
+                <h3>100% Free Frame Scanning</h3>
+                <p>Our free system scans video frames instantly to isolate text overlays, dynamic ingredient amounts, and step indicators directly from moving footage.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-bubble">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                </div>
+                <h3>Unrestricted Metric Converter</h3>
+                <p>Instantly scales servings and converts raw measurements (like "cups" or "pinches") to your preferred metric formats effortlessly and completely free.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-bubble">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <h3>Immaculate Recipe Logs</h3>
+                <p>Generate clean Markdown step checklists, interactive ingredient matrices, and automated shopping lists without paying a single cent.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<section id="how-it-works" class="how-it-works-section" style="padding: 5rem 0; background-color: #ffffff; border-top: 1px solid #e2e8f0;">
+    <div class="section-container" style="max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; text-align: center;">
+        <span class="badge" style="background-color: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600;">3 Simple Steps</span>
+        <h2 class="section-title" style="font-size: 2.25rem; font-weight: 800; margin: 1rem 0 0.5rem 0; color: #0f172a;">How to Convert Video to Recipe Online</h2>
+        <p class="section-subtitle" style="color: #64748b; max-width: 36rem; margin: 0 auto 4rem auto; font-size: 1.1rem;">Transform social food links into clean, organized culinary instructions instantly using our free AI video-to-recipe converter engine.</p>
+        
+        <div class="steps-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2.5rem; text-align: left; position: relative;">
+            
+            <div class="step-card" style="position: relative; background: #ffffff; padding: 2rem; border-radius: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.01);">
+                <div style="background: #fff7ed; color: #f97316; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 1rem; margin-bottom: 1.5rem; font-weight: 800; font-size: 1.25rem; border: 1px solid #ffedd5;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #f97316; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.25rem;">Step 01</span>
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: #0f172a;">Paste Video Link</h3>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                    Find a cooking clip on Instagram, TikTok, YouTube Shorts, or Facebook. Copy the URL link from your browser or app share sheet and paste it directly into our <a href="#convert" style="color:#f97316; text-decoration:none">extraction input box</a> above.
+                </p>
+            </div>
+
+            <div class="step-card" style="position: relative; background: #ffffff; padding: 2rem; border-radius: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.01);">
+                <div style="background: #fff7ed; color: #f97316; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 1rem; margin-bottom: 1.5rem; font-weight: 800; font-size: 1.25rem; border: 1px solid #ffedd5;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                    </svg>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #f97316; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.25rem;">Step 02</span>
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: #0f172a;">AI Engine Parsing</h3>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                    Click the conversion button. Our free artificial intelligence models run dynamic audio transcripts and frame-by-frame text visual scanning to isolate measurements, ingredients, and cook timelines flawlessly.
+                </p>
+            </div>
+
+            <div class="step-card" style="position: relative; background: #ffffff; padding: 2rem; border-radius: 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.01);">
+                <div style="background: #fff7ed; color: #f97316; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 1rem; margin-bottom: 1.5rem; font-weight: 800; font-size: 1.25rem; border: 1px solid #ffedd5;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #f97316; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.25rem;">Step 03</span>
+                <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: #0f172a;">Get Structured Recipe</h3>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                    Your immaculate recipe log displays instantly in an organized pop-up card view. Check off ingredients as you browse, review precise metric adjustments, and copy text directions to your custom digital cookbook.
+                </p>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<section id="why-choose-us" class="why-choose-section" style="background-color: #fafafa; padding: 5rem 0; border-top: 1px solid var(--border-color, #e2e8f0);">
+    <div class="section-container" style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; text-align: center;">
+        <h2 class="section-title" style="font-size: 2.25rem; font-weight: 800; margin: 1rem 0 0.5rem 0; color: #0f172a;">A Free Recipe Extractor Built for Home Cooks</h2>
+        <p class="section-subtitle" style="color: #64748b; max-width: 36rem; margin: 0 auto 3.5rem auto;">We don't just copy descriptions. Our free web tool parses video frames to give you flawless culinary parameters instantly.</p>
+        
+        <div class="why-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; text-align: left;">
+            <div class="why-card" style="background: #ffffff; padding: 2rem; border-radius: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+                <div style="color: #f97316; margin-bottom: 1rem;">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a;">Zero Cost, No Sign-up</h4>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5;">Convert unlimited cooking links to text recipes free of charge. No hidden paywalls, subscription tricks, or credit cards required.</p>
+            </div>
+            <div class="why-card" style="background: #ffffff; padding: 2rem; border-radius: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+                <div style="color: #f97316; margin-bottom: 1rem;">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </div>
+                <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a;">Clean Formatting Always</h4>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5;">Say goodbye to massive emoji paragraphs and unstructured social noise. You get beautiful organized metric culinary components instantly.</p>
+            </div>
+            <div class="why-card" style="background: #ffffff; padding: 2rem; border-radius: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+                <div style="color: #f97316; margin-bottom: 1rem;">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a;">Save 15+ Mins Per Video</h4>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5;">Skip rewinding the short video twenty times onto a greasy smartphone screen. Open up our clean card interface and get to work.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="faq" class="faq-section" style="padding: 5rem 0; background-color: #ffffff;">
+    <div class="section-container" style="max-width: 800px; margin: 0 auto; padding: 0 1.5rem;">
+        <div style="text-align: center; margin-bottom: 3.5rem;">
+            <h2 class="section-title" style="font-size: 2.25rem; font-weight: 800; margin: 1rem 0 0.5rem 0; color: #0f172a;">Common Questions</h2>
+            <p class="section-subtitle" style="color: #64748b;">Everything you need to know about parsing your favorite food clips for free.</p>
+        </div>
+
+        <div class="faq-accordion-group" style="display: flex; flex-direction: column; gap: 1rem;">
+             <details style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; cursor: pointer;" open>
+                <summary style="font-weight: 700; font-size: 1.1rem; color: #0f172a; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                    How does this free video to recipe converter work?
+                    <span style="color: #f97316; font-size: 1.25rem;">&darr;</span>
+                </summary>
+                <p style="margin-top: 0.75rem; color: #475569; font-size: 0.95rem; line-height: 1.6; cursor: default;">
+                    Our online tool analyzes the raw frames and transcribes audio tracks from social media links to build structured cookbooks. This free video to recipe converter supports Instagram Reels, YouTube Shorts, and TikTok clips effortlessly.
+                </p>
+            </details>
+
+            <details style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; cursor: pointer;">
+                <summary style="font-weight: 700; font-size: 1.1rem; color: #0f172a; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                    Is this online video to recipe converter actually free?
+                    <span style="color: #f97316; font-size: 1.25rem;">&darr;</span>
+                </summary>
+                <p style="margin-top: 0.75rem; color: #475569; font-size: 0.95rem; line-height: 1.6; cursor: default;">
+                    Yes, it is 100% free! You can paste cooking video links from social media and extract cleanly formatted ingredient lists and structured steps without needing an account, trials, or paying fees.
+                </p>
+            </details>
+
+            <details style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; cursor: pointer;">
+                <summary style="font-weight: 700; font-size: 1.1rem; color: #0f172a; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                    Are there any daily extraction speed caps or limits?
+                    <span style="color: #f97316; font-size: 1.25rem;">&darr;</span>
+                </summary>
+                <p style="margin-top: 0.75rem; color: #475569; font-size: 0.95rem; line-height: 1.6; cursor: default;">
+                    None at all. You can parse as many URLs from Instagram Reels, TikTok, Facebook Watch, and YouTube Shorts as you want without being blocked by a paywall screen.
+                </p>
+            </details>
+
+            <details style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; cursor: pointer;">
+                <summary style="font-weight: 700; font-size: 1.1rem; color: #0f172a; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                    What if the creator didn't list ingredients in the text description?
+                    <span style="color: #f97316; font-size: 1.25rem;">&darr;</span>
+                </summary>
+                <p style="margin-top: 0.75rem; color: #475569; font-size: 0.95rem; line-height: 1.6; cursor: default;">
+                    That's our specialty! Our free parser runs a complete frame-by-frame visual analysis to capture text popups within the clip and combines it with advanced audio transcription to extract exact mentioned measurements.
+                </p>
+            </details>
+
+           
+        </div>
+    </div>
+</section>
+
+<style>
+    .recipe-accordion-item summary::-webkit-details-marker,
+    .recipe-trace-dropdown summary::-webkit-details-marker {
+        display: none;
+    }
+    
+    details.recipe-accordion-item[open] summary .no-spin,
+    details.recipe-accordion-item[open] summary .no-spin *,
+    details.recipe-trace-dropdown[open] summary .no-spin,
+    details.recipe-trace-dropdown[open] summary .no-spin * {
+        transform: none !important;
+        transition: none !important;
+    }
+
+    details.recipe-accordion-item[open] summary .accordion-arrow {
+        transform: rotate(180deg) !important;
+        color: #f97316 !important;
+    }
+
+    @keyframes spinLoader {
+        to { transform: rotate(360deg); }
+    }
+    
+    html {
+        scroll-behavior: smooth;
+    }
+
+    @media (max-width: 576px) {
+        .responsive-card-body {
+            padding: 0 1.25rem 1.25rem 1.25rem !important;
+            margin-top: -0.75rem !important;
+        }
+        #recipe-output-section {
+            border-radius: 1rem !important;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const historySection = document.getElementById("conversionHistorySection");
+    const historyList = document.getElementById("historyList");
+    const urlInput = document.getElementById("videoUrlInput");
+    const recipeTitleElement = document.getElementById("previewRecipeTitle");
+
+    // FUNCTION: Renders standard layout list elements from client-side memory logs
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem("recipeHistory")) || [];
+        if (history.length === 0) {
+            historySection.style.display = "none";
+            return;
+        }
+
+        historySection.style.display = "block";
+        historyList.innerHTML = ""; 
+
+        history.forEach(item => {
+            const historyBtn = document.createElement("button");
+            historyBtn.type = "button";
+            historyBtn.style.cssText = `
+                background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb;
+                padding: 0.4rem 0.8rem; border-radius: 999px; font-size: 0.85rem;
+                font-weight: 500; cursor: pointer; display: inline-flex;
+                align-items: center; gap: 0.35rem; transition: all 0.2s ease;
+                white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+            `;
+
+            historyBtn.onmouseenter = () => { historyBtn.style.background = "#e5e7eb"; historyBtn.style.color = "#111827"; };
+            historyBtn.onmouseleave = () => { historyBtn.style.background = "#f3f4f6"; historyBtn.style.color = "#374151"; };
+
+            historyBtn.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>${item.title}</span>
+            `;
+
+            historyBtn.addEventListener("click", function() {
+                urlInput.value = item.url;
+                urlInput.focus();
+                if(recipeTitleElement) {
+                    recipeTitleElement.textContent = item.title;
+                }
+            });
+
+            historyList.appendChild(historyBtn);
+        });
+    }
+
+    // RUN ON LOAD: Instantly show history cards on fresh page render
+    renderHistory();
+
+    // DJANGO INTEGRATION HOOK: If Python returned a success block, write it to local records instantly
+    {% if recipe_extracted and recipe_title %}
+        const completedUrl = "{{ request.POST.video_url|escapejs }}";
+        const completedTitle = "{{ recipe_title|escapejs }}";
+
+        if (completedUrl && completedTitle) {
+            let history = JSON.parse(localStorage.getItem("recipeHistory")) || [];
+            // Remove existing instances of the same URL to prevent layout duplicates
+            history = history.filter(item => item.url !== completedUrl);
+            
+            // Push newest record onto stack array array track
+            history.unshift({
+                url: completedUrl,
+                title: completedTitle,
+                timestamp: new Date().getTime()
+            });
+
+            if (history.length > 5) history.pop();
+            localStorage.setItem("recipeHistory", JSON.stringify(history));
+            
+            // Re-run execution to draw item pills cleanly under the form 
+            renderHistory();
+        }
+    {% endif %}
+});
+
+// FORM ANIMATION SYSTEM (Kept standalone for UI updates)
+document.getElementById('recipeSubmitForm').addEventListener('submit', function() {
+    if (document.querySelector('.supported-networks')) {
+        document.querySelector('.supported-networks').style.display = 'none';
+    }
+    document.getElementById('submitBtn').style.display = 'none';
+    document.getElementById('loadingIndicator').style.display = 'inline-flex';
+});
+</script>
+{% endblock %}

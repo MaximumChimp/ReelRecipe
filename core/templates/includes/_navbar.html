@@ -1,0 +1,28 @@
+{% load static %}
+
+<header class="main-header">
+    <div class="nav-container">
+        
+        <a href="/" class="brand-logo" aria-label="Reel Recipe Home">
+            <div class="logo-wrapper">
+                <img src="{% static 'core/images/Reel_Recipe.png' %}" alt="Reel Recipe Logo" class="brand-image">
+            </div>
+        </a>
+
+        <input type="checkbox" id="menu-toggle" class="menu-toggle-input">
+        <label for="menu-toggle" class="hamburger-button" aria-label="Toggle Navigation Menu">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </label>
+
+        <nav class="nav-menu">
+            <a href="/#convert" class="nav-link">Home</a>
+            <a href="/#features" class="nav-link">Features</a>
+            <a href="/#how-it-works" class="nav-link">How it works</a>
+            <a href="/#why-choose-us" class="nav-link">Why choose us</a>
+            <a href="/#faq" class="nav-link">FAQ</a>
+        </nav>
+
+    </div>
+</header>

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main style="background-color: #ffffff; padding: 6rem 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #334155;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 0 1.5rem; line-height: 1.7;">
+        
+        <h1 style="font-size: 2.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">Privacy Policy</h1>
+        <p style="color: #64748b; margin-bottom: 2.5rem;">Last Updated: {{ now|date:"F d, Y" }}</p>
+        
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">1. Information We Collect</h2>
+            <p>RecipeConverter operates as a free AI-powered data extraction web utility. When using our service, we collect minimal data required to process requests:</p>
+            <ul style="padding-left: 1.25rem; margin-top: 0.5rem;">
+                <li>Public third-party video URLs provided directly by you.</li>
+                <li>Anonymized technical data (browser type, basic platform metrics) to optimize processing efficiency.</li>
+            </ul>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">2. How We Use Data</h2>
+            <p>The processing architecture processes third-party URLs strictly to run dynamic video-frame scanning and audio transcription models. We extract public text elements to display structured recipe metrics interface cards. We do not sell, rent, or distribute data layers to marketing brokers.</p>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">3. Third-Party Links</h2>
+            <p>Our platform handles video tracking links across Instagram, TikTok, Facebook, and YouTube. We do not manage the infrastructure, cookie setups, or standard privacy architectures deployed on those external destination networks.</p>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">4. Contact Us</h2>
+            <p>If you have any questions regarding data transparency metrics or security handling configurations, reach out to our administration team directly.</p>
+        </section>
+
+    </div>
+</main>
+{% endblock %}

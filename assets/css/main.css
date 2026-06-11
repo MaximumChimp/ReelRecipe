@@ -1,0 +1,644 @@
+/* ==========================================================================
+   1. GLOBAL VARIABLES & RESET
+   ========================================================================== */
+:root {
+    --primary: #f97316;
+    --primary-hover: #ea580c;
+    --primary-light: #fff7ed;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --bg-main: #ffffff;
+    --bg-alt: #fafafa;
+    --bg-card: #f8fafc;
+    --border-color: #e2e8f0;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-full: 9999px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text-main);
+    background-color: var(--bg-main);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Global Reusable Components */
+.section-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--primary-light);
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.375rem 1rem;
+    border-radius: var(--radius-full);
+    margin-bottom: 1.25rem;
+    border: 1px solid rgba(249, 115, 22, 0.15);
+}
+
+.section-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.025em;
+    margin-bottom: 0.75rem;
+}
+
+.section-subtitle {
+    font-size: 1.125rem;
+    color: var(--text-muted);
+    max-width: 42rem;
+    margin-bottom: 3.5rem;
+}
+
+/* ==========================================================================
+   2. HERO SECTION
+   ========================================================================== */
+.hero-section {
+    padding: 4rem 0;
+    background: radial-gradient(circle at 90% 10%, var(--primary-light) 0%, transparent 40%);
+    overflow: hidden;
+}
+
+.hero-grid-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4rem;
+    align-items: center;
+}
+
+.hero-content-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.hero-title {
+    font-size: 2.75rem;
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--text-main);
+    letter-spacing: -0.03em;
+    margin-bottom: 1.25rem;
+}
+
+.hero-subtitle {
+    font-size: 1.125rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+}
+
+/* Extractor Input Group Form */
+.extractor-form {
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    background: var(--bg-main);
+    padding: 0.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.input-icon-wrapper {
+    display: none; /* Hidden on tiny mobile profiles, structured inside media queries */
+    align-items: center;
+    padding-left: 1rem;
+    color: var(--text-muted);
+}
+
+.input-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.video-input-field {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 1rem;
+    font-size: 1rem;
+    color: var(--text-main);
+    background: transparent;
+    width: 100%;
+}
+
+.video-input-field::placeholder {
+    color: #94a3b8;
+}
+
+.btn-extract {
+    background-color: var(--primary);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 1rem 1.75rem;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+    white-space: nowrap;
+}
+
+
+.btn-extract:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Supported Social Networks Row */
+.supported-networks {
+    width: 100%;
+}
+
+.network-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.network-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.net-tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: #475569;
+}
+
+/* ==========================================================================
+   3. HERO INTERACTIVE VISUAL DISPLAY (RIGHT SIDE)
+   ========================================================================== */
+.hero-visual-right {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    align-items: center;
+}
+
+.converter-video-box {
+    width: 100%;
+    max-width: 320px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    border: 4px solid var(--bg-main);
+}
+
+.hero-video-element {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+}
+
+/* Curved Arrow Vector Styling */
+.converter-arrow-relation {
+        display: block;
+        position: absolute;
+        left: 178%; 
+        top: 22%;
+        width: 45px;
+        height: 90px;
+        color: var(--primary);
+        z-index: 10;
+    }
+/* Converted Card Box Simulation */
+.converter-recipe-box {
+    width: 100%;
+    max-width: 340px;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+.recipe-premium-header {
+    margin-bottom: 0.5rem;
+}
+
+.recipe-mini-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #059669;
+    background: #ecfdf5;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.converter-recipe-box h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 1rem;
+}
+
+.card-inner-block h4 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.recipe-mini-ingredients {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.recipe-mini-ingredients li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.premium-check-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0f2fe;
+    color: #0284c7;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-full);
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+.ingredient-text {
+    font-size: 0.9rem;
+    color: #334155;
+}
+
+.ingredient-note {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+/* ==========================================================================
+   4. FEATURES SHOWCASE & CAPABILITIES
+   ========================================================================== */
+.features-section {
+    padding: 5rem 0;
+    background-color: var(--bg-main);
+    border-top: 1px solid var(--border-color);
+}
+
+.features-section .section-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+/* Transformation Row Visual Box */
+.conversion-showcase-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    width: 100%;
+    margin-bottom: 5rem;
+}
+
+.showcase-box {
+    width: 100%;
+    max-width: 400px;
+    text-align: left;
+}
+
+.showcase-label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.showcase-label.static-success {
+    color: #059669;
+}
+
+.video-wrapper-inner {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    aspect-ratio: 16/9;
+}
+
+.showcase-video-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Pulse Divider Indicator */
+.showcase-arrow-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+    height: 40px;
+}
+
+.pulse-line-horizontal {
+    display: none; /* Configured dynamically for desktop layout screens */
+}
+
+.arrow-icon-circle {
+    background: var(--primary);
+    color: white;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+    transform: rotate(90deg); /* Points down on mobile devices natively */
+}
+
+/* Inside Generated Recipe Box Prototype */
+.recipe-card-inner {
+    background: var(--bg-main);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    border: 1px solid var(--border-color);
+}
+
+.recipe-category {
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.recipe-header h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin: 0.15rem 0 0.5rem 0;
+}
+
+.recipe-meta-metrics {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.recipe-divider {
+    border: 0;
+    height: 1px;
+    background: var(--border-color);
+    margin: 1rem 0;
+}
+
+.recipe-body-content h4 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.recipe-list-styled {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.recipe-list-styled li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #334155;
+}
+
+/* Feature Details Matrix Grid */
+.features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    width: 100%;
+}
+
+.feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 2.5rem 2rem;
+    border-radius: var(--radius-lg);
+    text-align: left;
+    transition: var(--transition);
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+    border-color: #cbd5e1;
+}
+
+.feature-icon-bubble {
+    width: 44px;
+    height: 44px;
+    background: var(--bg-main);
+    color: var(--primary);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    border: 1px solid var(--border-color);
+}
+
+.feature-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--text-main);
+}
+
+.feature-card p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* ==========================================================================
+   5. NATIVE CUSTOM DETAILS ACCORDION EFFECTS (FAQ & SYSTEM PANELS)
+   ========================================================================== */
+details {
+    transition: var(--transition);
+}
+
+details summary::-webkit-details-marker {
+    display: none; /* Extinguishes system default arrows */
+}
+
+details[open] {
+    border-color: rgba(249, 115, 22, 0.3) !important;
+    background-color: var(--bg-main) !important;
+    box-shadow: var(--shadow);
+}
+
+details[open] summary span {
+    transform: rotate(180deg);
+}
+
+details summary span {
+    transition: transform 0.2s ease;
+}
+
+/* ==========================================================================
+   6. RESPONSIVE MEDIA QUERIES (BREAKPOINTS)
+   ========================================================================== */
+
+/* --- Tablet / Medium Viewports (768px and up) --- */
+@media (min-width: 768px) {
+    .section-title {
+        font-size: 2.5rem;
+    }
+
+    .hero-section {
+        padding: 6rem 0;
+    }
+
+    .input-group {
+        flex-direction: row;
+        align-items: center;
+        border-radius: var(--radius-full);
+        padding: 0.5rem 0.5rem 0.5rem 1rem;
+    }
+
+    .input-icon-wrapper {
+        display: flex;
+    }
+
+    .video-input-field {
+        padding: 0.75rem;
+    }
+
+    .btn-extract {
+        width: auto;
+        border-radius: var(--radius-full);
+        padding: 0.875rem 2rem;
+    }
+
+    /* Showcase Layout Transformation */
+    .conversion-showcase-container {
+        flex-direction: row;
+        justify-content: space-between;
+        position: relative;
+    }
+
+    .showcase-box {
+        flex: 1;
+        max-width: 46%;
+    }
+
+    .showcase-arrow-divider {
+        width: 8%;
+        height: auto;
+    }
+
+    .arrow-icon-circle {
+        transform: rotate(0deg); /* Points forward horizontally on landscape viewports */
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* --- Desktop Viewports (1024px and up) --- */
+@media (min-width: 1024px) {
+    .hero-grid-container {
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 2rem;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+    }
+
+    .hero-visual-right {
+        flex-direction: row;
+        justify-content: flex-end;
+        height: 480px;
+    }
+
+    .converter-video-box {
+        position: absolute;
+        left: 0;
+        top: 0;
+        
+        z-index: 2;
+    }
+
+    .converter-recipe-box {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        z-index: 3;
+    }
+
+    .converter-arrow-relation {
+        display: block;
+        position: absolute;
+        left: 78%; 
+        top: 15%;
+        width: 65px;
+        height: 90px;
+        color: var(--primary);
+        z-index: 10;
+    }
+}

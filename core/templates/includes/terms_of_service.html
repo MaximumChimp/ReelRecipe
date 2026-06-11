@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main style="background-color: #ffffff; padding: 6rem 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #334155;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 0 1.5rem; line-height: 1.7;">
+        
+        <h1 style="font-size: 2.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">Terms of Service</h1>
+        <p style="color: #64748b; margin-bottom: 2.5rem;">Last Updated: {{ now|date:"F d, Y" }}</p>
+        
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">1. Acceptance of Terms</h2>
+            <p>By executing searches or parsing links within RecipeConverter, you affirm alignment with our operational guidelines, technical usage parameters, and safety requirements. If you disagree with these global application terms, please stop using the interface layers.</p>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">2. Permitted Use & Limitations</h2>
+            <p>This extractor is offered exclusively as a free tool to parse public content for personal, non-commercial culinary use. You agree not to abuse or attempt to disrupt our parsing engine with high-frequency automated scraping scripts, DDOS loops, or malicious entry payloads.</p>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">3. Intellectual Property Disclaimer</h2>
+            <p>RecipeConverter does not claim rights to any cooking content or proprietary details extracted from video clips. Copyright metrics remain with the original digital content publishers. Users are solely responsible for compliance with creator rights and fair use policies.</p>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem;">4. Limitation of Liability</h2>
+            <p>This parsing utility is provided entirely "as-is" without active accuracy guarantees. We are not liable for inaccurate recipe scaling, metric rounding discrepancies, translation bugs, or cooking kitchen mishaps arising from parsed data.</p>
+        </section>
+
+    </div>
+</main>
+{% endblock %}
