@@ -30,7 +30,8 @@ ALLOWED_HOSTS = [
     'reel-recipe-chi.vercel.app', 
     '127.0.0.1', 
     'localhost',
-    'reelrecipe.online'
+    'reelrecipe.online',
+    'reel-recipe-7g40p54lr-arvins-projects-02888758.vercel.app'
 ]
 
 if 'VERCEL_URL' in os.environ:
