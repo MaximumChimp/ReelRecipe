@@ -134,7 +134,7 @@ STATICFILES_FINDERS = [
 
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'assets',
+    BASE_DIR / 'static',
 ]
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
