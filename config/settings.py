@@ -33,6 +33,8 @@ ALLOWED_HOSTS = [
     'reelrecipe.online'
 ]
 
+if 'VERCEL_URL' in os.environ:
+    ALLOWED_HOSTS.append(os.environ['VERCEL_URL'])
 
 # Application definition
 
