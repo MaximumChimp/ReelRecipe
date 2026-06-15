@@ -14,7 +14,7 @@ import dj_database_url
 env = environ.Env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+DATABASE_CONN_STRING = os.environ.get('DATABASE_URL')
 # Read .env file if it exists (local development)
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
@@ -86,13 +86,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-        ssl_require=True if os.environ.get('VERCEL') else False
-    )
-}
+if DATABASE_CONN_STRING:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_CONN_STRING,
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    # If working on your local machine offline, fallback to SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
