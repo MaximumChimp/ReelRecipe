@@ -9,6 +9,7 @@ import os
 import environ
 import django.contrib.staticfiles.finders
 import re
+import dj_database_url
 # 1. INITIALIZE ENVIROMENT VARIABLES IMMEDIATELY AT THE TOP
 env = environ.Env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
