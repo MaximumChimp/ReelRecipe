@@ -134,11 +134,11 @@ STATICFILES_FINDERS = [
 
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR,'assets')
+    os.path.join(BASE_DIR,'static')
 ]
 
 
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
 
 # WhiteNoise storage optimization block
 STORAGES = {
