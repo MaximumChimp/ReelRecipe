@@ -21,9 +21,5 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('',include('core.urls')),
-    path(
-        "ads.txt",
-        RedirectView.as_view(url=staticfiles_storage.url("ads.txt")),
-    ),
+    path('',include('core.urls'))
 ]
