@@ -1,8 +1,10 @@
 import os
 import re
+import json  # Added for JSON serialization
 import requests
 import yt_dlp
 from google import genai
+from google.api_core.exceptions import GoogleAPIError
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
@@ -82,15 +84,10 @@ def home_view(request):
         video_url = request.POST.get('video_url')
         
         if video_url:
-            # Gather base details (Title, Description, etc.)
             title, duration, description, raw_context = get_video_data_free(video_url)
-            
-            # Count how many words are actually in the creator's description box
             description_word_count = len(description.strip().split()) if description else 0
             
             try:
-                # 🛑 CRITICAL INTERCEPT: If the metadata is empty, corrupted, or has fewer than 8 words,
-                # do NOT send it to Gemini. Force an immediate skip to the Hugging Face multimedia engine!
                 if title == "Culinary Extraction" or description_word_count < 8:
                     raise Exception("Sparse metadata guardrail triggered. Bypassing Gemini to run deep video/audio scan...")
 
@@ -107,7 +104,6 @@ def home_view(request):
                     - [Step description]
                     """
                 
-                # --- TIER 1: Standard Execution via Cloud Gemini ---
                 client = genai.Client()
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
@@ -127,30 +123,26 @@ def home_view(request):
                 
                 raw_log_payload = ai_output
 
-            except Exception as gemini_err:
-                # --- TIER 2 & 3: Gemini Failure OR Sparse Metadata Guardrail Triggered ---
-                print(f"Skipping Gemini branch: {str(gemini_err)}")
+            except (GoogleAPIError, Exception) as gemini_err:
+                print(f"Gemini error or bypass caught: {str(gemini_err)}")
                 print("Forwarding job to remote Hugging Face video parsing cluster...")
                 
                 try:
-                    # POST the processing job to your remote 16GB RAM Hugging Face container instance
                     hf_response = requests.post(
                         HF_SPACE_API_URL,
                         json={"video_url": video_url},
-                        timeout=60  # Generous timeout for deep frame-by-frame and speech parsing
+                        timeout=60
                     )
                     
                     if hf_response.status_code == 200:
                         data = hf_response.json()
                         
-                        # Sync up the true video title caught by Hugging Face's downloader
                         if data.get("title") and data.get("title") != "Media Video Recipe":
                             title = data.get("title")
                             
                         ingredients = data.get("ingredients", [])
                         directions = data.get("directions", [])
                         
-                        # Ensure we don't display empty cards if the models missed the text cues
                         if not ingredients:
                             ingredients = ["No explicit text ingredients observed on screen. Review video timeline components visually."]
                         if not directions:
@@ -165,7 +157,6 @@ def home_view(request):
                         raise Exception(f"Hugging Face worker container returned an unstable code: {hf_response.status_code}")
                         
                 except Exception as hf_err:
-                    # --- EMERGENCY TIER 4: Ultimate Text Fallback Engine ---
                     print(f"Hugging Face worker down or timed out ({str(hf_err)}). Defaulting to regex description scrape...")
                     ingredients, directions = parse_recipe_from_text_fallback(title, description)
                     
@@ -177,19 +168,30 @@ def home_view(request):
                         f"{description if description else 'No raw metadata script description available for this target streaming URL.'}"
                     )
             
-            # Pack values safely to display on your HTML template dashboard cards
-            request.session['cached_recipe'] = {
+            # --- Structuring Data into JSON Format ---
+            recipe_payload = {
                 'recipe_title': title if title != "Culinary Extraction" else "Video Cooking Recipe",
                 'recipe_duration': duration,
                 'recipe_ingredients': ingredients,
-                'recipe_directions': directions,
+                'recipe_directions': directions
+            }
+            
+            # Save the clean recipe data as a JSON string, keeping the log payload separate for debugging
+            request.session['cached_recipe'] = {
+                'recipe_json': json.dumps(recipe_payload, indent=4),
                 'raw_log': raw_log_payload
             }
             return redirect('/')
             
     if 'cached_recipe' in request.session:
         recipe_data = request.session.pop('cached_recipe')
-        context.update(recipe_data)
+        
+        # Parse the JSON string back into native dictionary items so the HTML template continues working out-of-the-box
+        parsed_recipe = json.loads(recipe_data['recipe_json'])
+        context.update(parsed_recipe)
+        
+        context['raw_log'] = recipe_data['raw_log']
+        context['recipe_json_string'] = recipe_data['recipe_json']  # Available if you want to output raw JSON on your dashboard
         context['recipe_extracted'] = True
 
     return render(request, 'core/home.html', context)

@@ -1,5 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block title %}{{ recipe.title }} Recipe Extracted from Video | Reel Recipe{% endblock %}
+
+{% block meta %}
+<meta name="description" content="Ingredients and directions for {{ recipe.title }}. Extracted instantly from video video link.">
+<meta name="keywords" content="{{ recipe.title }}, video recipe, extracted recipe">
+{% endblock %}
 
 {% block content %}
 <section id="convert" class="hero-section">
@@ -645,12 +651,60 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // FORM ANIMATION SYSTEM (Kept standalone for UI updates)
-document.getElementById('recipeSubmitForm').addEventListener('submit', function() {
-    if (document.querySelector('.supported-networks')) {
-        document.querySelector('.supported-networks').style.display = 'none';
-    }
-    document.getElementById('submitBtn').style.display = 'none';
-    document.getElementById('loadingIndicator').style.display = 'inline-flex';
+<script>
+document.getElementById('recipeSubmitForm').addEventListener('submit', function(e) {
+    // 1. Prevents standard form processing to avoid browser tab spinner
+    e.preventDefault();
+
+    const form = this;
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const formData = new FormData(form);
+
+    // 2. Show your beautiful inline conversion spinner
+    submitBtn.style.display = 'none';
+    loadingIndicator.style.display = 'flex';
+
+    // 3. Request background template interpolation from Django
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text()) // Get raw template HTML document return context
+    .then(htmlString => {
+        // 4. Shut down custom indicator elements
+        submitBtn.style.display = 'block';
+        loadingIndicator.style.display = 'none';
+
+        // 5. Parse returned content structures and inject the modal backdrop onto your body
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlString, 'text/html');
+        const incomingModal = doc.getElementById('recipe-modal-backdrop');
+
+        if (incomingModal) {
+            // Remove previous version structural layouts if they exist
+            const oldModal = document.getElementById('recipe-modal-backdrop');
+            if (oldModal) oldModal.remove();
+
+            // Inject the functional backdrop container element
+            document.body.appendChild(incomingModal);
+            
+            // Clean out text inputs for your next conversion
+            document.getElementById('videoUrlInput').value = '';
+        } else {
+            alert("Could not extract recipe from this link. Please check the URL syntax.");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        submitBtn.style.display = 'block';
+        loadingIndicator.style.display = 'none';
+        alert("An error occurred during submission handling.");
+    });
 });
+</script>
 </script>
 {% endblock %}

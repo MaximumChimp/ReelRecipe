@@ -5,13 +5,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1859513091530973"
+     crossorigin="anonymous"></script>
+    
+    <!-- Static Assets -->
     <link rel="icon" type="image/x-icon" href="{% static 'core/images/favicon.ico' %}">
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
     <link rel="stylesheet" href="{% static 'core/css/navbar.css' %}">
     
     <title>{% block title %}Reel Recipe - Free Video to Recipe Converter Online{% endblock %}</title>
+    
+    <!-- Dynamic SEO Meta Block -->
+    {% block meta %}
     <meta name="description" content="Convert any video to a recipe instantly for free. Paste Instagram Reels, TikToks, or YouTube links to extract clean, structured ingredient lists and directions.">    
     <meta name="keywords" content="video to recipe, free video to recipe converter, extract recipe from video, reels to recipe, tiktok recipe parser">
+    {% endblock %}
 </head>
 <body class="app-body">
 
@@ -24,9 +33,9 @@
         {% endblock %}
     </main>
     
-         {% include "includes/_footer.html" %}
+    {% include "includes/_footer.html" %}
+
+    <!-- Hook for page-specific scripts or styles if needed later -->
+    {% block extra_js %}{% endblock %}
 </body>
-<style>
-    
-</style>
 </html>
