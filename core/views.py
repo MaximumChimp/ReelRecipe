@@ -1,16 +1,18 @@
 import os
 import re
-import cv2
-import easyocr
-import whisper
+import requests
 import yt_dlp
 from google import genai
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
+# 🚨 CHANGE THIS: Replace with your actual Hugging Face Space direct URL
+HF_SPACE_API_URL = "https://maximumchimp-reel-recipe-ai-worker.hf.space/extract"
+
+
 def get_video_data_free(video_url):
     """
-    Tier 2 Helper: Fetches core metadata using yt-dlp.
+    Tier 2 Helper: Fetches core metadata and description text using yt-dlp.
     """
     ydl_opts = {
         'skip_download': True,
@@ -29,15 +31,15 @@ def get_video_data_free(video_url):
         return "Culinary Extraction", "10 Mins", "", f"Meta fallback context. Target URL: {video_url}"
 
 
-def parse_recipe_from_text(title, text_pool):
+def parse_recipe_from_text_fallback(title, description):
     """
-    A smart text regex engine that filters ingredients and steps out of any string pool
-    (Whether compiled from creator descriptions, Whisper transcripts, or EasyOCR frames).
+    Local Regex Fallback: If both Gemini and Hugging Face space fail, 
+    this salvages ingredients and steps from the raw description string.
     """
     ingredients = []
     directions = []
     
-    lines = [line.strip() for line in text_pool.split('\n') if line.strip()]
+    lines = [line.strip() for line in description.split('\n') if line.strip()]
     current_section = None
     
     for line in lines:
@@ -58,7 +60,6 @@ def parse_recipe_from_text(title, text_pool):
             if clean_dir:
                 directions.append(clean_dir)
                 
-    # Regex fallback if text is flat/unstructured
     if not ingredients and not directions:
         for line in lines:
             if re.search(r'^\d+(?:/\d+)?\s*(?:g|ml|oz|lbs?|cups?|tbsp|tsp|pinches)\b', line, re.IGNORECASE) or line.startswith('-'):
@@ -66,74 +67,12 @@ def parse_recipe_from_text(title, text_pool):
             elif re.match(r'^\d+[\.\)]', line) or any(act in line.lower() for act in ['mix', 'bake', 'fry', 'chop', 'add', 'pour']):
                 directions.append(re.sub(r'^\d+[\.\)]\s*', '', line).strip())
                 
+    if not ingredients:
+        ingredients = ["Could not isolate distinct ingredient structures from description text."]
+    if not directions:
+        directions = [f"Review the full raw description log parameters below to build your {title} workflow."]
+        
     return ingredients, directions
-
-
-def run_deep_multimedia_fallback(video_url):
-    """
-    Tier 3 Ultimate Fallback: Downloads video, uses Whisper for spoken words,
-    and runs EasyOCR on raw video frames to catch on-screen ingredients text.
-    """
-    video_file = "/tmp/fallback_video.mp4"
-    
-    # Download lower quality video stream quickly to save disk bandwidth
-    ydl_opts = {
-        'format': 'worstvideo[ext=mp4]+worstaudio[ext=m4a]/worst[ext=mp4]',
-        'outtmpl': video_file,
-        'quiet': True
-    }
-    
-    gathered_text_chunks = []
-    
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([video_url])
-            
-        # 1. Spoken Audio Processing via Whisper
-        try:
-            audio_model = whisper.load_model("tiny") # Tiny model is fast and uses minimal RAM
-            transcript = audio_model.transcribe(video_file)
-            if transcript.get("text"):
-                gathered_text_chunks.append("--- Spoken Transcript ---")
-                gathered_text_chunks.append(transcript["text"])
-        except Exception as e:
-            gathered_text_chunks.append(f"[Audio Error: {str(e)}]")
-
-        # 2. On-Screen Text Tracking via OpenCV + EasyOCR
-        try:
-            reader = easyocr.Reader(['en'], gpu=False)
-            cap = cv2.VideoCapture(video_file)
-            fps = cap.get(cv2.CAP_PROP_FPS) or 30
-            
-            frame_count = 0
-            gathered_text_chunks.append("\n--- Text Observed On Screen ---")
-            
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                
-                # Sample 1 frame every 2 seconds to keep processing fast
-                if frame_count % int(fps * 2) == 0:
-                    ocr_results = reader.readtext(frame, detail=0)
-                    if ocr_results:
-                        line_text = " ".join(ocr_results).strip()
-                        if len(line_text) > 3:
-                            gathered_text_chunks.append(line_text)
-                            
-                frame_count += 1
-            cap.release()
-        except Exception as e:
-            gathered_text_chunks.append(f"[OCR Vision Error: {str(e)}]")
-            
-    except Exception as download_err:
-        return f"Video stream could not be pulled: {str(download_err)}"
-        
-    # Clean up downloaded file from local storage container
-    if os.path.exists(video_file):
-        os.remove(video_file)
-        
-    return "\n".join(gathered_text_chunks)
 
 
 def home_view(request):
@@ -143,7 +82,7 @@ def home_view(request):
         video_url = request.POST.get('video_url')
         
         if video_url:
-            # Gather base details
+            # Unpack the video description context
             title, duration, description, raw_context = get_video_data_free(video_url)
             
             prompt = f"""
@@ -161,7 +100,7 @@ def home_view(request):
                 """
             
             try:
-                # --- TIER 1: Try Gemini API ---
+                # --- TIER 1: Standard Execution via Cloud Gemini ---
                 client = genai.Client()
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
@@ -178,39 +117,48 @@ def home_view(request):
                     directions = [line.strip().lstrip('0123456789.-• ') for line in dir_block.split("\n") if line.strip()]
                 else:
                     ingredients = [line.strip() for line in ai_output.split("\n") if line.strip()][:5]
-                    directions = ["Structure anomaly. Read trace log below."]
+                    directions = ["Structure layout anomaly. Read trace log below."]
                 
                 raw_log_payload = ai_output
 
             except Exception as gemini_err:
-                # --- TIER 2: Gemini fails, fall back to parsing Creator Text ---
-                print(f"Gemini failed: {str(gemini_err)}. Launching local failover engine...")
+                # --- TIER 2 & 3: Gemini Failure / Quota Exceeded ---
+                print(f"Gemini API limit reached ({str(gemini_err)}). Offloading to Hugging Face worker space...")
                 
-                ingredients, directions = parse_recipe_from_text(title, description)
-                log_source = "Parsed from Creator Video Description Data"
-                
-                # --- TIER 3: Description is blank! Fall back to Whisper + EasyOCR ---
-                if len(ingredients) <= 1 and (not description or len(description.strip()) < 10):
-                    print("Description text empty. Initializing computer vision and speech pipelines...")
-                    multimedia_dump = run_deep_multimedia_fallback(video_url)
+                try:
+                    # POST the processing job to your remote 16GB RAM Hugging Face container instance
+                    hf_response = requests.post(
+                        HF_SPACE_API_URL,
+                        json={"video_url": video_url},
+                        timeout=50  # Gives Whisper/EasyOCR plenty of time to process audio/video frames
+                    )
                     
-                    # Parse whatever text was picked up via video scanning and voice audio extraction
-                    ingredients, directions = parse_recipe_from_text(title, multimedia_dump)
-                    log_source = f"Generated via Local AI Frame Scanning & Audio Transcription:\n\n{multimedia_dump}"
-                
-                # Ultimate catch-all display values if text pools yielded no structured steps
-                if not ingredients or "Could not isolate" in str(ingredients):
-                    ingredients = ["No text found. Watch video visuals for exact measurements."]
-                if not directions:
-                    directions = [f"Follow along with the original timeline components to cook your {title}."]
-                
-                raw_log_payload = (
-                    f"[SYSTEM NOTICE: Cloud AI Offline - Local Failover Pipeline Activated]\n"
-                    f"Gemini Exception Trace: {str(gemini_err)}\n\n"
-                    f"--- Strategy Log ---\n{log_source}"
-                )
+                    if hf_response.status_code == 200:
+                        data = hf_response.json()
+                        ingredients = data.get("ingredients", [])
+                        directions = data.get("directions", [])
+                        raw_log_payload = (
+                            f"[SYSTEM NOTICE: Cloud AI Offline - Hugging Face Fallback Active]\n"
+                            f"Gemini Exception Trace: {str(gemini_err)}\n\n"
+                            f"--- HF Video Scan Log ---\n{data.get('raw_dump')}"
+                        )
+                    else:
+                        raise Exception(f"Hugging Face worker returned a bad response status code: {hf_response.status_code}")
+                        
+                except Exception as hf_err:
+                    # --- EMERGENCY TIER 4: Absolute Catch-All via Local Regex Engine ---
+                    print(f"Hugging Face worker unavailable ({str(hf_err)}). Defaulting to local description scrape...")
+                    ingredients, directions = parse_recipe_from_text_fallback(title, description)
+                    
+                    raw_log_payload = (
+                        f"[SYSTEM NOTICE: Severe Multi-Engine Failure - Processing Local Text Only]\n"
+                        f"Gemini Error Trace: {str(gemini_err)}\n"
+                        f"Hugging Face Space Error Trace: {str(hf_err)}\n\n"
+                        f"--- Raw Creator Text description ---\n"
+                        f"{description if description else 'No text description available from creator link.'}"
+                    )
             
-            # Pack values safely to display on dashboard card
+            # Pack values safely to display on your template card components
             request.session['cached_recipe'] = {
                 'recipe_title': title,
                 'recipe_duration': duration,
@@ -227,6 +175,10 @@ def home_view(request):
 
     return render(request, 'core/home.html', context)
 
-# Keep standard compliance views active below
-def privacy_policy(request): return render(request, 'includes/privacy_policy.html', {'now': timezone.now()})
-def terms_of_service(request): return render(request, 'includes/terms_of_service.html', {'now': timezone.now()})
+
+def privacy_policy(request):
+    return render(request, 'includes/privacy_policy.html', {'now': timezone.now()})
+
+
+def terms_of_service(request):
+    return render(request, 'includes/terms_of_service.html', {'now': timezone.now()})
