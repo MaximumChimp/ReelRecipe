@@ -141,14 +141,18 @@ def home_view(request):
                     
                     if hf_response.status_code == 200:
                         data = hf_response.json()
+                        
+                        # Extract the true title parsed by Hugging Face!
+                        if data.get("title") and data.get("title") != "Media Video Recipe":
+                            title = data.get("title")
+                            
                         ingredients = data.get("ingredients", [])
                         directions = data.get("directions", [])
                         
-                        # Set structural clean messages if the remote worker didn't extract clear items
                         if not ingredients:
-                            ingredients = ["No ingredients caught by machine scanning filters. Try an interactive video review."]
+                            ingredients = ["No explicit text format ingredients found. Use video player controls to review recipe components visually."]
                         if not directions:
-                            directions = ["No concrete timeline execution steps isolated. Follow audio cues from media link."]
+                            directions = [f"Follow along with the original media timeline metrics to process your recipe setup."]
                             
                         raw_log_payload = (
                             f"[SYSTEM NOTICE: Cloud AI Offline - Hugging Face Fallback Active]\n"
