@@ -6,7 +6,7 @@ from google import genai
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
-# 🚨 CHANGE THIS: Replace with your actual Hugging Face Space direct URL
+# 🚨 Live API Worker Link Configuration
 HF_SPACE_API_URL = "https://maximumchimp-reel-recipe-ai-worker.hf.space/extract"
 
 
@@ -28,7 +28,7 @@ def get_video_data_free(video_url):
             context_payload = f"Video Title: {title}\nDescription text: {description}\n"
             return title, duration, description, context_payload
     except Exception:
-        return "Culinary Extraction", "10 Mins", "", f"Meta fallback context. Target URL: {video_url}"
+        return "Culinary Extraction", "10 Mins", "", "Meta fallback context. Target URL: " + str(video_url)
 
 
 def parse_recipe_from_text_fallback(title, description):
@@ -67,10 +67,10 @@ def parse_recipe_from_text_fallback(title, description):
             elif re.match(r'^\d+[\.\)]', line) or any(act in line.lower() for act in ['mix', 'bake', 'fry', 'chop', 'add', 'pour']):
                 directions.append(re.sub(r'^\d+[\.\)]\s*', '', line).strip())
                 
-    if not ingredients:
-        ingredients = ["Could not isolate distinct ingredient structures from description text."]
+    if not ingredients or "Could not isolate" in str(ingredients):
+        ingredients = ["No explicit text format ingredients found. Use video player controls to review recipe components visually."]
     if not directions:
-        directions = [f"Review the full raw description log parameters below to build your {title} workflow."]
+        directions = [f"Follow along with the original media timeline metrics to process your {title} setup."]
         
     return ingredients, directions
 
@@ -85,21 +85,26 @@ def home_view(request):
             # Unpack the video description context
             title, duration, description, raw_context = get_video_data_free(video_url)
             
-            prompt = f"""
-                You are an expert culinary data extractor. Analyze the following video metadata:
-                {raw_context}
-
-                If directions and ingredients are sparse, use your knowledge of the recipe title ("{title}") to reconstruct it. 
-
-                Provide the output strictly in this exact format:
-                INGREDIENTS:
-                - [Amount] [Ingredient Name]
-
-                DIRECTIONS:
-                - [Step description]
-                """
-            
             try:
+                # 🛑 GUARDRAIL CHECK: If metadata failed, bypass Gemini immediately to prevent hallucinating computational data
+                if title == "Culinary Extraction" or "Meta fallback context" in raw_context:
+                    raise Exception("Scraper meta block triggered: Title returned fallback string placeholders.")
+
+                prompt = f"""
+                    You are an expert culinary data extractor. Analyze the following video metadata:
+                    {raw_context}
+
+                    CRITICAL: If directions and ingredients are sparse, use your deep culinary knowledge of the recipe title ("{title}") to reconstruct it accurately.
+                    Do NOT invent technical, code, or data-extraction steps.
+
+                    Provide the output strictly in this exact format:
+                    INGREDIENTS:
+                    - [Amount] [Ingredient Name]
+
+                    DIRECTIONS:
+                    - [Step description]
+                    """
+                
                 # --- TIER 1: Standard Execution via Cloud Gemini ---
                 client = genai.Client()
                 response = client.models.generate_content(
@@ -117,30 +122,38 @@ def home_view(request):
                     directions = [line.strip().lstrip('0123456789.-• ') for line in dir_block.split("\n") if line.strip()]
                 else:
                     ingredients = [line.strip() for line in ai_output.split("\n") if line.strip()][:5]
-                    directions = ["Structure layout anomaly. Read trace log below."]
+                    directions = ["Structure layout anomaly detected. Parsing error logs for source details."]
                 
                 raw_log_payload = ai_output
 
             except Exception as gemini_err:
-                # --- TIER 2 & 3: Gemini Failure / Quota Exceeded ---
-                print(f"Gemini API limit reached ({str(gemini_err)}). Offloading to Hugging Face worker space...")
+                # --- TIER 2 & 3: Gemini Failure / Meta Block Corrupted / Quota Exceeded ---
+                print(f"Bypassing/Failing Gemini processing branch due to: {str(gemini_err)}")
+                print("Forwarding structural analysis directly to Hugging Face worker instance...")
                 
                 try:
                     # POST the processing job to your remote 16GB RAM Hugging Face container instance
                     hf_response = requests.post(
                         HF_SPACE_API_URL,
                         json={"video_url": video_url},
-                        timeout=50  # Gives Whisper/EasyOCR plenty of time to process audio/video frames
+                        timeout=50  # Gives Whisper/EasyOCR plenty of time to run multimedia audio/video pipelines
                     )
                     
                     if hf_response.status_code == 200:
                         data = hf_response.json()
                         ingredients = data.get("ingredients", [])
                         directions = data.get("directions", [])
+                        
+                        # Set structural clean messages if the remote worker didn't extract clear items
+                        if not ingredients:
+                            ingredients = ["No ingredients caught by machine scanning filters. Try an interactive video review."]
+                        if not directions:
+                            directions = ["No concrete timeline execution steps isolated. Follow audio cues from media link."]
+                            
                         raw_log_payload = (
                             f"[SYSTEM NOTICE: Cloud AI Offline - Hugging Face Fallback Active]\n"
-                            f"Gemini Exception Trace: {str(gemini_err)}\n\n"
-                            f"--- HF Video Scan Log ---\n{data.get('raw_dump')}"
+                            f"Execution Engine Context: {str(gemini_err)}\n\n"
+                            f"--- HF Video Scan Log ---\n{data.get('raw_dump', 'No video transcription logs returned.')}"
                         )
                     else:
                         raise Exception(f"Hugging Face worker returned a bad response status code: {hf_response.status_code}")
@@ -152,15 +165,15 @@ def home_view(request):
                     
                     raw_log_payload = (
                         f"[SYSTEM NOTICE: Severe Multi-Engine Failure - Processing Local Text Only]\n"
-                        f"Gemini Error Trace: {str(gemini_err)}\n"
-                        f"Hugging Face Space Error Trace: {str(hf_err)}\n\n"
-                        f"--- Raw Creator Text description ---\n"
-                        f"{description if description else 'No text description available from creator link.'}"
+                        f"Primary Engine Log: {str(gemini_err)}\n"
+                        f"Secondary Engine Log: {str(hf_err)}\n\n"
+                        f"--- Raw Creator Text Description ---\n"
+                        f"{description if description else 'No raw text metadata strings available from target creator link.'}"
                     )
             
             # Pack values safely to display on your template card components
             request.session['cached_recipe'] = {
-                'recipe_title': title,
+                'recipe_title': title if title != "Culinary Extraction" else "Media Recipe Link",
                 'recipe_duration': duration,
                 'recipe_ingredients': ingredients,
                 'recipe_directions': directions,
