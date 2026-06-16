@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block meta %}
+<meta name="description" content="Ingredients and directions for {{ recipe.title }}. Extracted instantly from video video link.">
+<meta name="keywords" content="{{ recipe.title }}, video recipe, extracted recipe">
+{% endblock %}
+
 {% block content %}
 <section id="convert" class="hero-section">
     <div class="hero-grid-container layout-large-preview">
