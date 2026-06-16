@@ -80,39 +80,6 @@
                 </svg>
             </div>
 
-            {% comment %} <div class="converter-recipe-box">
-                <h3 id="previewRecipeTitle">Chicken Afritada</h3>
-             
-                <div class="card-inner-block">
-                    <h4>Ingredients</h4>
-                    <ul class="recipe-mini-ingredients">
-                        <li>
-                            <div class="premium-check-icon">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            </div>
-                            <span class="ingredient-text"><strong>500g</strong> Chicken <span class="ingredient-note">(bone-in, cut up)</span></span>
-                        </li>
-                        <li>
-                            <div class="premium-check-icon">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            </div>
-                            <span class="ingredient-text"><strong>250ml</strong> Tomato Sauce</span>
-                        </li>
-                        <li>
-                            <div class="premium-check-icon">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            </div>
-                            <span class="ingredient-text"><strong>1 large</strong> Potato & Carrot <span class="ingredient-note">(cubed)</span></span>
-                        </li>
-                        <li>
-                            <div class="premium-check-icon">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            </div>
-                            <span class="ingredient-text"><strong>1/2 cup</strong> Green Peas & Bell Pepper</span>
-                        </li>
-                    </ul>
-                </div>
-            </div> {% endcomment %}
             <div class="converter-recipe-box" >
                     <div class="recipe-header">
                         <h3>Chicken Afritada</h3>
@@ -298,6 +265,8 @@ function downloadRecipeAsImage() {
 }
 </script>
 {% endif %}
+
+
 
 <section id="features" class="features-section">
     <div class="section-container">
@@ -620,90 +589,104 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // FUNCTION: Safely writes successful conversions directly to client history log records
+    function addToHistory(url, title) {
+        if (!url || !title) return;
+        let history = JSON.parse(localStorage.getItem("recipeHistory")) || [];
+        
+        // Remove existing instances of the same URL to prevent layout duplicates
+        history = history.filter(item => item.url !== url);
+        
+        // Push newest record onto stack array
+        history.unshift({
+            url: url,
+            title: title,
+            timestamp: new Date().getTime()
+        });
+
+        if (history.length > 5) history.pop();
+        localStorage.setItem("recipeHistory", JSON.stringify(history));
+        
+        // Re-run execution to draw item pills cleanly under the form 
+        renderHistory();
+    }
+
     // RUN ON LOAD: Instantly show history cards on fresh page render
     renderHistory();
 
-    // DJANGO INTEGRATION HOOK: If Python returned a success block, write it to local records instantly
+    // DJANGO INITIAL BACKEND HOOK: Runs if page is rendered with data standardly
     {% if recipe_extracted and recipe_title %}
-        const completedUrl = "{{ request.POST.video_url|escapejs }}";
-        const completedTitle = "{{ recipe_title|escapejs }}";
-
-        if (completedUrl && completedTitle) {
-            let history = JSON.parse(localStorage.getItem("recipeHistory")) || [];
-            // Remove existing instances of the same URL to prevent layout duplicates
-            history = history.filter(item => item.url !== completedUrl);
-            
-            // Push newest record onto stack array array track
-            history.unshift({
-                url: completedUrl,
-                title: completedTitle,
-                timestamp: new Date().getTime()
-            });
-
-            if (history.length > 5) history.pop();
-            localStorage.setItem("recipeHistory", JSON.stringify(history));
-            
-            // Re-run execution to draw item pills cleanly under the form 
-            renderHistory();
-        }
+        addToHistory("{{ request.POST.video_url|escapejs }}", "{{ recipe_title|escapejs }}");
     {% endif %}
-});
 
-// FORM ANIMATION SYSTEM (Kept standalone for UI updates)
-<script>
-document.getElementById('recipeSubmitForm').addEventListener('submit', function(e) {
-    // 1. Prevents standard form processing to avoid browser tab spinner
-    e.preventDefault();
+    // FORM ANIMATION SYSTEM & ASYNC AJAX SUBMIT
+    document.getElementById('recipeSubmitForm').addEventListener('submit', function(e) {
+        e.preventDefault(); // Stops the browser tab from spinning up a native loader
 
-    const form = this;
-    const submitBtn = document.getElementById('submitBtn');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const formData = new FormData(form);
+        const form = this;
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const targetUrl = urlInput.value;
 
-    // 2. Show your beautiful inline conversion spinner
-    submitBtn.style.display = 'none';
-    loadingIndicator.style.display = 'flex';
+        // Display your clean, inner-page container CSS spinner
+        submitBtn.style.display = 'none';
+        loadingIndicator.style.display = 'flex';
 
-    // 3. Request background template interpolation from Django
-    fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.text()) // Get raw template HTML document return context
-    .then(htmlString => {
-        // 4. Shut down custom indicator elements
-        submitBtn.style.display = 'block';
-        loadingIndicator.style.display = 'none';
+        const formData = new FormData(form);
 
-        // 5. Parse returned content structures and inject the modal backdrop onto your body
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlString, 'text/html');
-        const incomingModal = doc.getElementById('recipe-modal-backdrop');
-
-        if (incomingModal) {
-            // Remove previous version structural layouts if they exist
-            const oldModal = document.getElementById('recipe-modal-backdrop');
-            if (oldModal) oldModal.remove();
-
-            // Inject the functional backdrop container element
-            document.body.appendChild(incomingModal);
+        // Send the data asynchronously to Django backend
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Turn off your inner page spinner
+            submitBtn.style.display = 'block';
+            loadingIndicator.style.display = 'none';
             
-            // Clean out text inputs for your next conversion
-            document.getElementById('videoUrlInput').value = '';
-        } else {
-            alert("Could not extract recipe from this link. Please check the URL syntax.");
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        submitBtn.style.display = 'block';
-        loadingIndicator.style.display = 'none';
-        alert("An error occurred during submission handling.");
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const modalBackdrop = doc.getElementById('recipe-modal-backdrop');
+            
+            if (modalBackdrop) {
+                // Remove older instances if user converts multiple links in one session
+                const oldModal = document.getElementById('recipe-modal-backdrop');
+                if (oldModal) oldModal.remove();
+
+                // Append the incoming modal payload directly into the active viewport body
+                document.body.appendChild(modalBackdrop);
+
+                // Scrape the dynamic target recipe title text from parsed payload DOM
+                const dynamicTitleHeader = modalBackdrop.querySelector('h2');
+                if (dynamicTitleHeader) {
+                    const extractedTitle = dynamicTitleHeader.textContent.trim();
+                    addToHistory(targetUrl, extractedTitle);
+                }
+
+                // Parse and append embedded JavaScript tags (like canvas image generation handlers)
+                const targetScripts = doc.querySelectorAll('script');
+                targetScripts.forEach(script => {
+                    if (!script.src && script.innerText.includes('downloadRecipeAsImage')) {
+                        const newScript = document.createElement('script');
+                        newScript.text = script.innerText;
+                        document.body.appendChild(newScript);
+                    }
+                });
+            } else {
+                // Fallback catch if rendering layout structural anomalies occurred
+                window.location.reload(); 
+            }
+        })
+        .catch(error => {
+            console.error('Extraction error:', error);
+            submitBtn.style.display = 'block';
+            loadingIndicator.style.display = 'none';
+        });
     });
 });
-</script>
 </script>
 {% endblock %}
