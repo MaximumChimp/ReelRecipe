@@ -82,21 +82,23 @@ def home_view(request):
         video_url = request.POST.get('video_url')
         
         if video_url:
-            # Unpack the video description context
+            # Gather base details (Title, Description, etc.)
             title, duration, description, raw_context = get_video_data_free(video_url)
             
+            # Count how many words are actually in the creator's description box
+            description_word_count = len(description.strip().split()) if description else 0
+            
             try:
-                # 🛑 GUARDRAIL CHECK: If metadata failed, bypass Gemini immediately to prevent hallucinating computational data
-                if title == "Culinary Extraction" or "Meta fallback context" in raw_context:
-                    raise Exception("Scraper meta block triggered: Title returned fallback string placeholders.")
+                # 🛑 CRITICAL INTERCEPT: If the metadata is empty, corrupted, or has fewer than 8 words,
+                # do NOT send it to Gemini. Force an immediate skip to the Hugging Face multimedia engine!
+                if title == "Culinary Extraction" or description_word_count < 8:
+                    raise Exception("Sparse metadata guardrail triggered. Bypassing Gemini to run deep video/audio scan...")
 
                 prompt = f"""
                     You are an expert culinary data extractor. Analyze the following video metadata:
                     {raw_context}
 
-                    CRITICAL: If directions and ingredients are sparse, use your deep culinary knowledge of the recipe title ("{title}") to reconstruct it accurately.
-                    Do NOT invent technical, code, or data-extraction steps.
-
+                    Clean up, extract, and accurately structure the ingredient metrics and cooking actions found in the text.
                     Provide the output strictly in this exact format:
                     INGREDIENTS:
                     - [Amount] [Ingredient Name]
@@ -121,63 +123,63 @@ def home_view(request):
                     ingredients = [line.strip("- ").strip() for line in ing_block.split("\n") if line.strip()]
                     directions = [line.strip().lstrip('0123456789.-• ') for line in dir_block.split("\n") if line.strip()]
                 else:
-                    ingredients = [line.strip() for line in ai_output.split("\n") if line.strip()][:5]
-                    directions = ["Structure layout anomaly detected. Parsing error logs for source details."]
+                    raise Exception("Gemini layout output did not match required structural blocks.")
                 
                 raw_log_payload = ai_output
 
             except Exception as gemini_err:
-                # --- TIER 2 & 3: Gemini Failure / Meta Block Corrupted / Quota Exceeded ---
-                print(f"Bypassing/Failing Gemini processing branch due to: {str(gemini_err)}")
-                print("Forwarding structural analysis directly to Hugging Face worker instance...")
+                # --- TIER 2 & 3: Gemini Failure OR Sparse Metadata Guardrail Triggered ---
+                print(f"Skipping Gemini branch: {str(gemini_err)}")
+                print("Forwarding job to remote Hugging Face video parsing cluster...")
                 
                 try:
                     # POST the processing job to your remote 16GB RAM Hugging Face container instance
                     hf_response = requests.post(
                         HF_SPACE_API_URL,
                         json={"video_url": video_url},
-                        timeout=50  # Gives Whisper/EasyOCR plenty of time to run multimedia audio/video pipelines
+                        timeout=60  # Generous timeout for deep frame-by-frame and speech parsing
                     )
                     
                     if hf_response.status_code == 200:
                         data = hf_response.json()
                         
-                        # Extract the true title parsed by Hugging Face!
+                        # Sync up the true video title caught by Hugging Face's downloader
                         if data.get("title") and data.get("title") != "Media Video Recipe":
                             title = data.get("title")
                             
                         ingredients = data.get("ingredients", [])
                         directions = data.get("directions", [])
                         
+                        # Ensure we don't display empty cards if the models missed the text cues
                         if not ingredients:
-                            ingredients = ["No explicit text format ingredients found. Use video player controls to review recipe components visually."]
+                            ingredients = ["No explicit text ingredients observed on screen. Review video timeline components visually."]
                         if not directions:
-                            directions = [f"Follow along with the original media timeline metrics to process your recipe setup."]
+                            directions = ["No concrete structural audio cues found. Follow the video visuals for steps."]
                             
                         raw_log_payload = (
-                            f"[SYSTEM NOTICE: Cloud AI Offline - Hugging Face Fallback Active]\n"
-                            f"Execution Engine Context: {str(gemini_err)}\n\n"
-                            f"--- HF Video Scan Log ---\n{data.get('raw_dump', 'No video transcription logs returned.')}"
+                            f"[SYSTEM NOTICE: Cloud AI Bypassed - Hugging Face Multimedia Pipeline Active]\n"
+                            f"Routing Context: {str(gemini_err)}\n\n"
+                            f"--- HF Video Scan Log Map ---\n{data.get('raw_dump', 'No media string matrix data returned.')}"
                         )
                     else:
-                        raise Exception(f"Hugging Face worker returned a bad response status code: {hf_response.status_code}")
+                        raise Exception(f"Hugging Face worker container returned an unstable code: {hf_response.status_code}")
                         
                 except Exception as hf_err:
-                    # --- EMERGENCY TIER 4: Absolute Catch-All via Local Regex Engine ---
-                    print(f"Hugging Face worker unavailable ({str(hf_err)}). Defaulting to local description scrape...")
+                    # --- EMERGENCY TIER 4: Ultimate Text Fallback Engine ---
+                    print(f"Hugging Face worker down or timed out ({str(hf_err)}). Defaulting to regex description scrape...")
                     ingredients, directions = parse_recipe_from_text_fallback(title, description)
                     
                     raw_log_payload = (
-                        f"[SYSTEM NOTICE: Severe Multi-Engine Failure - Processing Local Text Only]\n"
-                        f"Primary Engine Log: {str(gemini_err)}\n"
-                        f"Secondary Engine Log: {str(hf_err)}\n\n"
-                        f"--- Raw Creator Text Description ---\n"
-                        f"{description if description else 'No raw text metadata strings available from target creator link.'}"
+                        f"[SYSTEM NOTICE: Severe Operational Failover - Processing Fallback Text Variables Only]\n"
+                        f"Tier 1 Exception: {str(gemini_err)}\n"
+                        f"Tier 2 Exception: {str(hf_err)}\n\n"
+                        f"--- Raw Text Metadata description Buffer ---\n"
+                        f"{description if description else 'No raw metadata script description available for this target streaming URL.'}"
                     )
             
-            # Pack values safely to display on your template card components
+            # Pack values safely to display on your HTML template dashboard cards
             request.session['cached_recipe'] = {
-                'recipe_title': title if title != "Culinary Extraction" else "Media Recipe Link",
+                'recipe_title': title if title != "Culinary Extraction" else "Video Cooking Recipe",
                 'recipe_duration': duration,
                 'recipe_ingredients': ingredients,
                 'recipe_directions': directions,
