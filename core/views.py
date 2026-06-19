@@ -1,81 +1,57 @@
 import os
+import json
 import re
-import json  # Added for JSON serialization
-import requests
-import yt_dlp
+import time
 from google import genai
-from google.api_core.exceptions import GoogleAPIError
+from google.genai import types
+from google.genai.errors import APIError 
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from pydantic import BaseModel, Field
+from youtube_transcript_api import YouTubeTranscriptApi
 
-# 🚨 Live API Worker Link Configuration
-HF_SPACE_API_URL = "https://maximumchimp-reel-recipe-ai-worker.hf.space/extract"
+# --- Pydantic Data Schemas ---
 
+class RecipeComponent(BaseModel):
+    component_name: str = Field(description="The category stage like 'For Sauce', 'For Meat', etc.")
+    items: list[str] = Field(description="List of ingredients or step descriptions for this specific stage")
 
-def get_video_data_free(video_url):
+class StructuredRecipe(BaseModel):
+    recipe_title: str
+    recipe_duration: str
+    recipe_ingredients: list[RecipeComponent]
+    recipe_directions: list[RecipeComponent]
+
+# --- Helper Functions ---
+
+def extract_youtube_id(url):
     """
-    Tier 2 Helper: Fetches core metadata and description text using yt-dlp.
+    Extracts the 11-character YouTube video ID from various URL string formats.
+    Matches standard, shortened, embed, and share link variations.
     """
-    ydl_opts = {
-        'skip_download': True,
-        'quiet': True,
-        'writeautomaticsub': True,
-    }
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_url, download=False)
-            title = info.get('title', 'Extracted Recipe')
-            duration = f"{int(info.get('duration', 0) / 60)} Mins" if info.get('duration') else "10 Mins"
-            description = info.get('description', '')
-            context_payload = f"Video Title: {title}\nDescription text: {description}\n"
-            return title, duration, description, context_payload
-    except Exception:
-        return "Culinary Extraction", "10 Mins", "", "Meta fallback context. Target URL: " + str(video_url)
+    pattern = r'(?:v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/|^([^#\&\?]{11}))([^#\&\?]{11})'
+    match = re.search(pattern, url)
+    if match:
+        return match.group(2) if match.group(2) else match.group(1)
+    return None
 
-
-def parse_recipe_from_text_fallback(title, description):
+def fallback_parser_without_ai(url, error_message=None):
     """
-    Local Regex Fallback: If both Gemini and Hugging Face space fail, 
-    this salvages ingredients and steps from the raw description string.
+    If Gemini or the transcript API fails, this returns a safe structural response
+    to keep the user interface stable.
     """
-    ingredients = []
-    directions = []
-    
-    lines = [line.strip() for line in description.split('\n') if line.strip()]
-    current_section = None
-    
-    for line in lines:
-        lower_line = line.lower()
-        if any(kw in lower_line for kw in ['ingredient', 'components', 'what you need', 'shopping list']):
-            current_section = 'ingredients'
-            continue
-        elif any(kw in lower_line for kw in ['direction', 'instruction', 'method', 'step', 'how to make']):
-            current_section = 'directions'
-            continue
-            
-        if current_section == 'ingredients' or line.startswith('-') or line.startswith('•'):
-            clean_ing = line.lstrip('-• ').strip()
-            if clean_ing and len(clean_ing) < 100:
-                ingredients.append(clean_ing)
-        elif current_section == 'directions' or re.match(r'^\d+[\.\)]', line):
-            clean_dir = re.sub(r'^\d+[\.\)]\s*', '', line).strip()
-            if clean_dir:
-                directions.append(clean_dir)
-                
-    if not ingredients and not directions:
-        for line in lines:
-            if re.search(r'^\d+(?:/\d+)?\s*(?:g|ml|oz|lbs?|cups?|tbsp|tsp|pinches)\b', line, re.IGNORECASE) or line.startswith('-'):
-                ingredients.append(line.lstrip('- ').strip())
-            elif re.match(r'^\d+[\.\)]', line) or any(act in line.lower() for act in ['mix', 'bake', 'fry', 'chop', 'add', 'pour']):
-                directions.append(re.sub(r'^\d+[\.\)]\s*', '', line).strip())
-                
-    if not ingredients or "Could not isolate" in str(ingredients):
-        ingredients = ["No explicit text format ingredients found. Use video player controls to review recipe components visually."]
-    if not directions:
-        directions = [f"Follow along with the original media timeline metrics to process your {title} setup."]
-        
-    return ingredients, directions
+    msg = error_message or "Gemini servers are currently busy. Please try clicking submit again."
+    ingredients = [
+        "For \"System Notification\"",
+        f"    - {msg}"
+    ]
+    directions = [
+        "For \"Processing Stage\"",
+        "    - Extraction paused. Please verify your video link contains captions/transcript options."
+    ]
+    return "Recipe Extraction Failed", "0 Mins", ingredients, directions
 
+# --- Django Views ---
 
 def home_view(request):
     context = {'now': timezone.now()}
@@ -84,99 +60,114 @@ def home_view(request):
         video_url = request.POST.get('video_url')
         
         if video_url:
-            title, duration, description, raw_context = get_video_data_free(video_url)
-            description_word_count = len(description.strip().split()) if description else 0
+            client = genai.Client()
+            video_id = extract_youtube_id(video_url)
+            transcript_text = ""
             
-            try:
-                if title == "Culinary Extraction" or description_word_count < 8:
-                    raise Exception("Sparse metadata guardrail triggered. Bypassing Gemini to run deep video/audio scan...")
-
-                prompt = f"""
-                    You are an expert culinary data extractor. Analyze the following video metadata:
-                    {raw_context}
-
-                    Clean up, extract, and accurately structure the ingredient metrics and cooking actions found in the text.
-                    Provide the output strictly in this exact format:
-                    INGREDIENTS:
-                    - [Amount] [Ingredient Name]
-
-                    DIRECTIONS:
-                    - [Step description]
-                    """
-                
-                client = genai.Client()
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                )
-                ai_output = response.text
-                
-                if "INGREDIENTS:" in ai_output and "DIRECTIONS:" in ai_output:
-                    parts = ai_output.split("DIRECTIONS:")
-                    ing_block = parts[0].replace("INGREDIENTS:", "").strip()
-                    dir_block = parts[1].strip()
-                    
-                    ingredients = [line.strip("- ").strip() for line in ing_block.split("\n") if line.strip()]
-                    directions = [line.strip().lstrip('0123456789.-• ') for line in dir_block.split("\n") if line.strip()]
-                else:
-                    raise Exception("Gemini layout output did not match required structural blocks.")
-                
-                raw_log_payload = ai_output
-
-            except (GoogleAPIError, Exception) as gemini_err:
-                print(f"Gemini error or bypass caught: {str(gemini_err)}")
-                print("Forwarding job to remote Hugging Face video parsing cluster...")
-                
+            # --- Phase 1: Try gathering YouTube Text Data ---
+            if video_id:
                 try:
-                    hf_response = requests.post(
-                        HF_SPACE_API_URL,
-                        json={"video_url": video_url},
-                        timeout=60
-                    )
-                    
-                    if hf_response.status_code == 200:
-                        data = hf_response.json()
-                        
-                        if data.get("title") and data.get("title") != "Media Video Recipe":
-                            title = data.get("title")
-                            
-                        ingredients = data.get("ingredients", [])
-                        directions = data.get("directions", [])
-                        
-                        if not ingredients:
-                            ingredients = ["No explicit text ingredients observed on screen. Review video timeline components visually."]
-                        if not directions:
-                            directions = ["No concrete structural audio cues found. Follow the video visuals for steps."]
-                            
-                        raw_log_payload = (
-                            f"[SYSTEM NOTICE: Cloud AI Bypassed - Hugging Face Multimedia Pipeline Active]\n"
-                            f"Routing Context: {str(gemini_err)}\n\n"
-                            f"--- HF Video Scan Log Map ---\n{data.get('raw_dump', 'No media string matrix data returned.')}"
-                        )
-                    else:
-                        raise Exception(f"Hugging Face worker container returned an unstable code: {hf_response.status_code}")
-                        
-                except Exception as hf_err:
-                    print(f"Hugging Face worker down or timed out ({str(hf_err)}). Defaulting to regex description scrape...")
-                    ingredients, directions = parse_recipe_from_text_fallback(title, description)
-                    
-                    raw_log_payload = (
-                        f"[SYSTEM NOTICE: Severe Operational Failover - Processing Fallback Text Variables Only]\n"
-                        f"Tier 1 Exception: {str(gemini_err)}\n"
-                        f"Tier 2 Exception: {str(hf_err)}\n\n"
-                        f"--- Raw Text Metadata description Buffer ---\n"
-                        f"{description if description else 'No raw metadata script description available for this target streaming URL.'}"
-                    )
+                    transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+                    transcript_text = " ".join([item['text'] for item in transcript_list])
+                except Exception as transcript_err:
+                    print(f"Transcript Error: {str(transcript_err)}")
+                    # If no captions exist, we explicitly inform the model or drop back to URL strings
+                    transcript_text = ""
             
-            # --- Structuring Data into JSON Format ---
+            # If completely invalid URL form or extraction couldn't parse an ID
+            if not video_id:
+                title, duration, ingredients, directions = fallback_parser_without_ai(
+                    video_url, "Invalid YouTube link structure provided."
+                )
+                ai_response = None
+            else:
+                # Configuration settings for retrying API requests
+                max_retries = 3
+                retry_delay = 2 
+                ai_response = None
+
+                # --- Phase 2: Querying Gemini 2.5 Flash ---
+                for attempt in range(max_retries):
+                    try:
+                        prompt = f"""
+                        You are an expert culinary AI specializing in transcribing recipe tutorials into clean documentation.
+                        Your task is to analyze the provided YouTube data segment and extract an exceptionally accurate, highly structured recipe.
+
+                        ### YOUTUBE DATA:
+                        - Video Target URL: {video_url}
+                        - Visual Transcript Data: {transcript_text if transcript_text else "No transcript tracks detected. Rely on contextual knowledge of this specific link."}
+
+                        ### COMPONENT CATEGORIZATION GUIDELINES:
+                        You MUST split both the ingredients block and instructions/directions list into clear categorical components or preparation stages of the dish (e.g., "For Sauce", "For Marination", "For Meat assembly"). Do not dump everything into a single generic bucket.
+                        """
+
+                        print(f"Processing through Gemini (Attempt {attempt + 1}/{max_retries}): {video_url}")
+                        
+                        ai_response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=prompt,
+                            config=types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                                response_schema=StructuredRecipe,
+                                temperature=0.1 # Dropped to 0.1 to maximize consistency and reduce hallucinated ingredients
+                            )
+                        )
+                        break
+
+                    except APIError as api_err:
+                        if api_err.code == 503 and attempt < max_retries - 1:
+                            print(f"Gemini 503 Busy. Waiting {retry_delay}s and retrying...")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2 
+                            continue
+                        else:
+                            raise api_err 
+                    except Exception as e:
+                        raise e 
+
+            # --- Phase 3: Parsing Response Objects ---
+            try:
+                if ai_response:
+                    recipe_data = json.loads(ai_response.text)
+                    
+                    formatted_ingredients = []
+                    for comp in recipe_data.get('recipe_ingredients', []):
+                        formatted_ingredients.append(f"For \"{comp['component_name']}\"")
+                        for item in comp.get('items', []):
+                            formatted_ingredients.append(f"    - {item}")
+                        formatted_ingredients.append("")
+
+                    formatted_directions = []
+                    for comp in recipe_data.get('recipe_directions', []):
+                        formatted_directions.append(f"For \"{comp['component_name']}\"")
+                        for item in comp.get('items', []):
+                            formatted_directions.append(f"    - {item}")
+                        formatted_directions.append("")
+
+                    title = recipe_data.get('recipe_title', 'Gemini Extracted Recipe')
+                    duration = recipe_data.get('recipe_duration', 'Calculated from Video')
+                    ingredients = [line for line in formatted_ingredients if line.strip or line == ""]
+                    directions = [line for line in formatted_directions if line.strip or line == ""]
+                    raw_log_payload = ai_response.text
+                elif not video_id:
+                    # Already generated fallback data during error detection
+                    raw_log_payload = "Execution skipped: Invalid Video URL string patterns."
+                else:
+                    raise Exception("No response gathered from the AI cluster.")
+
+            except Exception as e:
+                print(f"Gemini Processing Exception: {str(e)}")
+                title, duration, ingredients, directions = fallback_parser_without_ai(video_url, str(e))
+                raw_log_payload = f"Error Tracking Capture: {str(e)}"
+
+            # --- Phase 4: Stashing Session Payloads ---
             recipe_payload = {
-                'recipe_title': title if title != "Culinary Extraction" else "Video Cooking Recipe",
-                'recipe_duration': duration,
-                'recipe_ingredients': ingredients,
-                'recipe_directions': directions
+                'recipe_title': recipe_data.get('recipe_title', 'Gemini Extracted Recipe'),
+                'recipe_duration': recipe_data.get('recipe_duration', 'Calculated from Video'),
+                'recipe_ingredients': recipe_data.get('recipe_ingredients', []),  # Pass list of objects directly
+                'recipe_directions': recipe_data.get('recipe_directions', [])     # Pass list of objects directly
             }
             
-            # Save the clean recipe data as a JSON string, keeping the log payload separate for debugging
             request.session['cached_recipe'] = {
                 'recipe_json': json.dumps(recipe_payload, indent=4),
                 'raw_log': raw_log_payload
@@ -185,13 +176,10 @@ def home_view(request):
             
     if 'cached_recipe' in request.session:
         recipe_data = request.session.pop('cached_recipe')
-        
-        # Parse the JSON string back into native dictionary items so the HTML template continues working out-of-the-box
         parsed_recipe = json.loads(recipe_data['recipe_json'])
         context.update(parsed_recipe)
-        
         context['raw_log'] = recipe_data['raw_log']
-        context['recipe_json_string'] = recipe_data['recipe_json']  # Available if you want to output raw JSON on your dashboard
+        context['recipe_json_string'] = recipe_data['recipe_json']
         context['recipe_extracted'] = True
 
     return render(request, 'core/home.html', context)
