@@ -439,4 +439,69 @@ function downloadRecipeAsImage() {
         </div>
     </div>
 </section>
+<!-- FAQ Accordion Section -->
+<section id="faq" class="faq-section" style="background-color: #ffffff; padding: 5rem 0; border-top: 1px solid #e2e8f0;">
+    <div class="section-container" style="max-width: 800px; margin: 0 auto; padding: 0 1.5rem;">
+        <div style="text-align: center; margin-bottom: 3.5rem;">
+            <h2 class="section-title" style="font-size: 2.25rem; font-weight: 800; margin: 1rem 0 0.5rem 0; color: #0f172a;">Common Questions</h2>
+            <p class="section-subtitle" style="color: #64748b; font-size: 1.05rem; max-width: 32rem; margin: 0 auto;">Everything you need to know about parsing your favorite food clips for free.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Question 1 -->
+            <details class="faq-item" style="background: #fafafa; border: 1px solid #e2e8f0; border-radius: 0.75rem; overflow: hidden;">
+                <summary style="font-size: 1.05rem; font-weight: 600; color: #0f172a; padding: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none; user-select: none;">
+                    <span style="display: inline-block; transform: none !important; transition: none !important;">How does this free video to recipe converter work?</span>
+                    <span style="color: #a1a1aa; font-size: 0.85rem; transform: none !important; transition: none !important;">▼</span>
+                </summary>
+                <div style="padding: 0 1.25rem 1.25rem 1.25rem; color: #64748b; font-size: 0.95rem; line-height: 1.6;">
+                    Our online tool analyzes the raw frames and transcribes audio tracks from social media links to build structured cookbooks. This free video to recipe converter supports Facebook Videos & Reels, Instagram Reels, YouTube Videos & Shorts, and TikTok clips effortlessly.
+                </div>
+            </details>
+
+            <!-- Question 2 -->
+            <details class="faq-item" style="background: #fafafa; border: 1px solid #e2e8f0; border-radius: 0.75rem; overflow: hidden;">
+                <summary style="font-size: 1.05rem; font-weight: 600; color: #0f172a; padding: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none; user-select: none;">
+                    <span style="display: inline-block; transform: none !important; transition: none !important;">Is this online video to recipe converter actually free?</span>
+                    <span style="color: #a1a1aa; font-size: 0.85rem; transform: none !important; transition: none !important;">▼</span>
+                </summary>
+                <div style="padding: 0 1.25rem 1.25rem 1.25rem; color: #64748b; font-size: 0.95rem; line-height: 1.6;">
+                    Yes, it is 100% free! You can paste cooking video links from social media and extract cleanly formatted ingredient lists and structured steps without needing an account, trials, or paying fees.
+                </div>
+            </details>
+
+            <!-- Question 3 -->
+            <details class="faq-item" style="background: #fafafa; border: 1px solid #e2e8f0; border-radius: 0.75rem; overflow: hidden;">
+                <summary style="font-size: 1.05rem; font-weight: 600; color: #0f172a; padding: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none; user-select: none;">
+                    <span style="display: inline-block; transform: none !important; transition: none !important;">Are there any daily extraction speed caps or limits?</span>
+                    <span style="color: #a1a1aa; font-size: 0.85rem; transform: none !important; transition: none !important;">▼</span>
+                </summary>
+                <div style="padding: 0 1.25rem 1.25rem 1.25rem; color: #64748b; font-size: 0.95rem; line-height: 1.6;">
+                    To ensure fair server performance for everyone, we maintain standard daily usage tiers. However, every standard conversion is completely free and you will never be blocked by a hidden subscription or paywall screen when extracting recipes from Facebook, Instagram, YouTube, or TikTok links.
+                </div>
+            </details>
+
+            <!-- Question 4 -->
+            <details class="faq-item" style="background: #fafafa; border: 1px solid #e2e8f0; border-radius: 0.75rem; overflow: hidden;">
+                <summary style="font-size: 1.05rem; font-weight: 600; color: #0f172a; padding: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; list-style: none; user-select: none;">
+                    <span style="display: inline-block; transform: none !important; transition: none !important;">What if the creator didn't list ingredients in the text description?</span>
+                    <span style="color: #a1a1aa; font-size: 0.85rem; transform: none !important; transition: none !important;">▼</span>
+                </summary>
+                <div style="padding: 0 1.25rem 1.25rem 1.25rem; color: #64748b; font-size: 0.95rem; line-height: 1.6;">
+                    That's our specialty! Our free parser runs a complete frame-by-frame visual analysis to capture text popups within the clip and combines it with advanced audio transcription to extract exact mentioned measurements.
+                </div>
+            </details>
+        </div>
+    </div>
+</section>
+
+<!-- Optional style override block to remove browser-default rotating triangle arrows entirely -->
+<style>
+    .faq-item summary::-webkit-details-marker {
+        display: none !important;
+    }
+    .faq-item summary {
+        list-style: none !important;
+    }
+</style>
 {% endblock %}
