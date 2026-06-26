@@ -26,13 +26,23 @@ class StructuredRecipe(BaseModel):
 
 def extract_youtube_id(url):
     """
-    Extracts the 11-character YouTube video ID from various URL string formats.
-    Matches standard, shortened, embed, and share link variations.
+    Extracts the 11-character YouTube video ID safely across standard, 
+    shortened (youtu.be), embed, and shorts formats.
     """
-    pattern = r'(?:v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/|^([^#\&\?]{11}))([^#\&\?]{11})'
-    match = re.search(pattern, url)
-    if match:
-        return match.group(2) if match.group(2) else match.group(1)
+    if not url:
+        return None
+        
+    # Standard patterns for youtube.com/watch?v=..., youtu.be/..., shorts/..., embed/...
+    patterns = [
+        r'(?:v=|\/v\/|embed\/|shorts\/|youtu\.be\/)([a-zA-M0-9_-]{11})',
+        r'(?:^|[^a-zA-M0-9_-])([a-zA-M0-9_-]{11})(?:$|[^a-zA-M0-9_-])'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+            
     return None
 
 def fallback_parser_without_ai(url, error_message=None):
@@ -55,77 +65,90 @@ def fallback_parser_without_ai(url, error_message=None):
 
 def home_view(request):
     context = {'now': timezone.now()}
-    
+
     if request.method == 'POST':
         video_url = request.POST.get('video_url')
+        print(f"Processing URL: {video_url}")
         
         if video_url:
             client = genai.Client()
             video_id = extract_youtube_id(video_url)
-            transcript_text = ""
             
-            # --- Phase 1: Try gathering YouTube Text Data ---
-            if video_id:
-                try:
-                    transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-                    transcript_text = " ".join([item['text'] for item in transcript_list])
-                except Exception as transcript_err:
-                    print(f"Transcript Error: {str(transcript_err)}")
-                    # If no captions exist, we explicitly inform the model or drop back to URL strings
-                    transcript_text = ""
+            # Pre-initialize variables to prevent unbound errors
+            video_transcript = None
+            ai_response = None
+            title, duration, ingredients, directions = None, None, None, None
             
-            # If completely invalid URL form or extraction couldn't parse an ID
             if not video_id:
                 title, duration, ingredients, directions = fallback_parser_without_ai(
                     video_url, "Invalid YouTube link structure provided."
                 )
-                ai_response = None
             else:
-                # Configuration settings for retrying API requests
                 max_retries = 3
                 retry_delay = 2 
-                ai_response = None
 
-                # --- Phase 2: Querying Gemini 2.5 Flash ---
-                for attempt in range(max_retries):
-                    try:
-                        prompt = f"""
-                        You are an expert culinary AI specializing in transcribing recipe tutorials into clean documentation.
-                        Your task is to analyze the provided YouTube data segment and extract an exceptionally accurate, highly structured recipe.
+                # --- NEW: Fetch the Transcript first ---
+                try:
+                    # Pass a priority list of language codes so en-US handles this video safely
+                    transcript_list = YouTubeTranscriptApi().fetch(video_id, languages=['en-US', 'en'])
+                    
+                    # Process dataclass objects to strings cleanly
+                    video_transcript = " ".join([
+                        item.text if hasattr(item, 'text') else item.get('text', '') 
+                        for item in transcript_list
+                    ])
+                    print("Transcript successfully extracted using language fallbacks.")
+                    
+                except Exception as transcript_err:
+                    print(f"Transcript extraction failed: {str(transcript_err)}")
+                    title, duration, ingredients, directions = fallback_parser_without_ai(
+                        video_url, f"Could not retrieve captions: {str(transcript_err)}"
+                    )
+                    video_transcript = None
 
-                        ### YOUTUBE DATA:
-                        - Video Target URL: {video_url}
-                        - Visual Transcript Data: {transcript_text if transcript_text else "No transcript tracks detected. Rely on contextual knowledge of this specific link."}
+                # Only proceed to Gemini if we have a valid transcript
+                if video_transcript:
+                    for attempt in range(max_retries):
+                        try:
+                            prompt = f"""
+                            You are an expert culinary AI specializing in transcribing recipe tutorials into clean documentation.
+                            
+                            Your primary task is to read and analyze the following text transcript of a cooking video:
+                            ---
+                            TRANSCRIPT: {video_transcript}
+                            ---
+                            
+                            Extract an exceptionally accurate, highly structured recipe from this video asset data.
 
-                        ### COMPONENT CATEGORIZATION GUIDELINES:
-                        You MUST split both the ingredients block and instructions/directions list into clear categorical components or preparation stages of the dish (e.g., "For Sauce", "For Marination", "For Meat assembly"). Do not dump everything into a single generic bucket.
-                        """
+                            ### COMPONENT CATEGORIZATION GUIDELINES:
+                            You MUST split both the ingredients block and instructions/directions list into clear categorical components or preparation stages of the dish (e.g., "For Sauce", "For Marination", "For Meat assembly"). Do not dump everything into a single generic bucket.
+                            """
 
-                        print(f"Processing through Gemini (Attempt {attempt + 1}/{max_retries}): {video_url}")
-                        
-                        ai_response = client.models.generate_content(
-                            model='gemini-2.5-flash',
-                            contents=prompt,
-                            config=types.GenerateContentConfig(
-                                response_mime_type="application/json",
-                                response_schema=StructuredRecipe,
-                                temperature=0.1 # Dropped to 0.1 to maximize consistency and reduce hallucinated ingredients
+                            print(f"Processing through Gemini (Attempt {attempt + 1}/{max_retries}): {video_id}")
+                            
+                            ai_response = client.models.generate_content(
+                                model='gemini-2.5-flash',
+                                contents=prompt,
+                                config=types.GenerateContentConfig(
+                                    response_mime_type="application/json",
+                                    response_schema=StructuredRecipe,
+                                    temperature=0.1
+                                )
                             )
-                        )
-                        break
+                            break
 
-                    except APIError as api_err:
-                        if api_err.code == 503 and attempt < max_retries - 1:
-                            print(f"Gemini 503 Busy. Waiting {retry_delay}s and retrying...")
-                            time.sleep(retry_delay)
-                            retry_delay *= 2 
-                            continue
-                        else:
-                            raise api_err 
-                    except Exception as e:
-                        raise e 
+                        except APIError as api_err:
+                            if api_err.code == 503 and attempt < max_retries - 1:
+                                print(f"Gemini 503 Busy. Waiting {retry_delay}s and retrying...")
+                                time.sleep(retry_delay)
+                                retry_delay *= 2 
+                                continue
+                            else:
+                                raise api_err 
+                        except Exception as e:
+                            raise e
 
-            # --- Phase 3: Parsing Response Objects ---
+            # --- Phase 2: Parsing Response Objects ---
             try:
                 if ai_response:
                     recipe_data = json.loads(ai_response.text)
@@ -146,12 +169,20 @@ def home_view(request):
 
                     title = recipe_data.get('recipe_title', 'Gemini Extracted Recipe')
                     duration = recipe_data.get('recipe_duration', 'Calculated from Video')
-                    ingredients = [line for line in formatted_ingredients if line.strip or line == ""]
-                    directions = [line for line in formatted_directions if line.strip or line == ""]
+                    ingredients = [line for line in formatted_ingredients if line.strip() or line == ""]
+                    directions = [line for line in formatted_directions if line.strip() or line == ""]
                     raw_log_payload = ai_response.text
+                    
                 elif not video_id:
-                    # Already generated fallback data during error detection
+                    # Invalid URL handled at the very beginning
                     raw_log_payload = "Execution skipped: Invalid Video URL string patterns."
+                    recipe_data = {} 
+                    
+                elif not video_transcript:
+                    # FIXED: Added logic hole patch for when transcript fails but video_id is valid
+                    raw_log_payload = "Execution skipped: Video transcript could not be fetched."
+                    recipe_data = {}
+                    
                 else:
                     raise Exception("No response gathered from the AI cluster.")
 
@@ -159,13 +190,14 @@ def home_view(request):
                 print(f"Gemini Processing Exception: {str(e)}")
                 title, duration, ingredients, directions = fallback_parser_without_ai(video_url, str(e))
                 raw_log_payload = f"Error Tracking Capture: {str(e)}"
+                recipe_data = {}
 
-            # --- Phase 4: Stashing Session Payloads ---
+            # --- Phase 3: Stashing Session Payloads ---
             recipe_payload = {
-                'recipe_title': recipe_data.get('recipe_title', 'Gemini Extracted Recipe'),
-                'recipe_duration': recipe_data.get('recipe_duration', 'Calculated from Video'),
-                'recipe_ingredients': recipe_data.get('recipe_ingredients', []),  # Pass list of objects directly
-                'recipe_directions': recipe_data.get('recipe_directions', [])     # Pass list of objects directly
+                'recipe_title': recipe_data.get('recipe_title', title),
+                'recipe_duration': recipe_data.get('recipe_duration', duration),
+                'recipe_ingredients': recipe_data.get('recipe_ingredients', ingredients if not ai_response else []),  
+                'recipe_directions': recipe_data.get('recipe_directions', directions if not ai_response else [])      
             }
             
             request.session['cached_recipe'] = {
